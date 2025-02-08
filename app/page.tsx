@@ -1,101 +1,151 @@
-import Image from "next/image";
+"use client";
+
+import { useSession, signIn } from "next-auth/react";
+import Link from "next/link";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { useForm } from "react-hook-form";
+import { useTopics } from "@/context/TopicsContext";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+
+interface TopicFormData {
+  title: string;
+  content: string;
+  adFee: number;
+  monthlyPVThreshold: number;
+}
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const { data: session, status } = useSession();
+  const { topics, addTopic } = useTopics();
+  const { register, handleSubmit, reset } = useForm<TopicFormData>();
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+  if (status === "loading") {
+    return <p>Loading...</p>;
+  }
+  if (!session) {
+    signIn();
+    return null;
+  }
+
+  // 広告主の場合のみトピック投稿フォームを表示する例
+  const isAdvertiser = session.user?.isAdvertiser;
+
+  const onSubmit = async (data: TopicFormData) => {
+    const newTopicData = {
+      title: data.title,
+      content: data.content,
+      adFee: data.adFee,
+      monthlyPVThreshold: data.monthlyPVThreshold,
+      advertiserId: session.user.email || "",
+    };
+
+    const res = await fetch("/api/topics", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(newTopicData),
+    });
+    if (res.ok) {
+      const createdTopic = await res.json();
+      addTopic(createdTopic);
+      reset();
+    } else {
+      console.error("トピックの保存に失敗しました");
+    }
+  };
+
+  return (
+    <div className="space-y-8 p-8">
+      <Card className="w-full p-4">
+        <CardHeader>
+          <CardTitle>Tourist Log</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col gap-4">
+            {session.user.isAdmin && (
+              <Link href="/admin">
+                <Button variant="outline">管理者ダッシュボード</Button>
+              </Link>
+            )}
+            {isAdvertiser && (
+              <>
+                <Link href="/advertiser">
+                  <Button variant="outline">広告主ダッシュボード</Button>
+                </Link>
+                <Card className="mt-8">
+                  <CardHeader>
+                    <CardTitle>新しいトピックを追加</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <form
+                      onSubmit={handleSubmit(onSubmit)}
+                      className="space-y-4"
+                    >
+                      <div>
+                        <label className="block mb-1">タイトル</label>
+                        <Input
+                          placeholder="トピックのタイトル"
+                          {...register("title", { required: true })}
+                        />
+                      </div>
+                      <div>
+                        <label className="block mb-1">内容</label>
+                        <Textarea
+                          placeholder="トピックの内容"
+                          {...register("content", { required: true })}
+                        />
+                      </div>
+                      <div>
+                        <label className="block mb-1">広告料 (円)</label>
+                        <Input
+                          type="number"
+                          placeholder="広告料"
+                          {...register("adFee", {
+                            required: true,
+                            valueAsNumber: true,
+                          })}
+                        />
+                      </div>
+                      <div>
+                        <label className="block mb-1">月のPV支払い基準</label>
+                        <Input
+                          type="number"
+                          placeholder="月のPV支払い基準"
+                          {...register("monthlyPVThreshold", {
+                            required: true,
+                            valueAsNumber: true,
+                          })}
+                        />
+                      </div>
+                      <Button type="submit">トピック投稿</Button>
+                    </form>
+                  </CardContent>
+                </Card>
+              </>
+            )}
+            <div>
+              <h2 className="text-2xl font-bold mb-4">トピック一覧</h2>
+              {topics.length === 0 ? (
+                <p>トピックはまだありません。</p>
+              ) : (
+                <ul className="space-y-4">
+                  {topics.map((topic) => (
+                    <li key={topic.id} className="border rounded p-4">
+                      <h3 className="text-xl font-semibold">{topic.title}</h3>
+                      <p>{topic.content}</p>
+                      <p>広告料: {topic.adFee} 円</p>
+                      <p>月のPV支払い基準: {topic.monthlyPVThreshold}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

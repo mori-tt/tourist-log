@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "target": "ES2017",
+    "strict": true,
+    "esModuleInterop": true,
+    "baseUrl": ".",
+    "rootDir": "."
+  },
+  "include": ["scripts/**/*.ts"],
+  "ts-node": {
+    "files": true
+  }
+}
