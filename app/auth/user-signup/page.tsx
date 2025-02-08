@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 
 export default function UserSignupPage() {
   const handleUserSignUp = () => {
-    // Googleサインイン後、ホームページまたはユーザー用の画面へリダイレクト
-    signIn("google", { callbackUrl: "/" });
+    // Google認証後、complete-signup ページに role=user を渡す
+    signIn("google", { callbackUrl: "/auth/complete-signup?role=user" });
   };
 
   return (

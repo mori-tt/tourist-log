@@ -1,10 +1,9 @@
 "use client";
 
-import { useRouter, useParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useArticles } from "@/context/ArticlesContext";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
 
 export default function ArticleDetailPage() {
   const params = useParams();

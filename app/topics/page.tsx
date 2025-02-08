@@ -4,6 +4,8 @@ import { useSession, signIn } from "next-auth/react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useTopics } from "@/context/TopicsContext";
 import TopicForm from "@/components/TopicForm";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export default function TopicsPage() {
   const { data: session, status } = useSession();
@@ -44,6 +46,9 @@ export default function TopicsPage() {
                 <p>{topic.content}</p>
                 <p>広告料: {topic.adFee} 円</p>
                 <p>月間PV支払い基準: {topic.monthlyPVThreshold}</p>
+                <Link href={`/topics/${topic.id}/articles`}>
+                  <Button className="mt-2">記事を見る・投稿する</Button>
+                </Link>
               </li>
             ))}
           </ul>

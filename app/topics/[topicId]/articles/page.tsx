@@ -37,8 +37,8 @@ export default function TopicArticlesPage() {
         )}
       </CardContent>
       <div className="mt-4">
-        <Link href="/articles">
-          <Button variant="outline">全記事一覧へ</Button>
+        <Link href={`/topics/${topicId}/articles/new`}>
+          <Button>新規記事を作成</Button>
         </Link>
       </div>
     </Card>

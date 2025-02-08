@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 
 export default function AdvertiserSignupPage() {
   const handleAdvertiserSignUp = () => {
-    // Googleサインイン後、広告主ダッシュボードへリダイレクト
-    signIn("google", { callbackUrl: "/advertiser" });
+    // Google認証後、complete-signup ページに role=advertiser を渡す
+    signIn("google", { callbackUrl: "/auth/complete-signup?role=advertiser" });
   };
 
   return (
