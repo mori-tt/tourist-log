@@ -43,7 +43,7 @@ export default function TopicPostPage() {
     });
     if (res.ok) {
       const createdTopic = await res.json();
-      addTopic(createdTopic);
+      addTopic(createdTopic); // クライアント側の Context に追加
       reset();
     } else {
       console.error("トピックの保存に失敗しました");

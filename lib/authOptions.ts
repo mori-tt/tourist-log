@@ -19,6 +19,7 @@ export const authOptions: NextAuthOptions = {
           where: { email: session.user.email },
         });
         if (dbUser) {
+          session.user.id = dbUser.id;
           session.user.isAdvertiser = dbUser.isAdvertiser;
           session.user.isAdmin = dbUser.isAdmin;
           session.user.isActive = dbUser.isActive;

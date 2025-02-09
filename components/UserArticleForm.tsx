@@ -7,11 +7,10 @@ import * as Showdown from "showdown";
 import "react-mde/lib/styles/css/react-mde-all.css";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useRouter, useParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useArticles } from "@/context/ArticlesContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
-import { useSession } from "next-auth/react";
 
 interface ArticleFormData {
   title: string;
@@ -25,17 +24,14 @@ export default function UserArticleForm() {
     setValue,
     formState: { errors },
   } = useForm<ArticleFormData>();
-
   const [selectedTab, setSelectedTab] = useState<"write" | "preview">("write");
   const [markdown, setMarkdown] = useState("");
   const [editorHeight, setEditorHeight] = useState(300);
-
-  const router = useRouter();
   const params = useParams();
   const topicId = Number(params.topicId);
   const { articles } = useArticles();
-  const { data: session } = useSession();
 
+  // マウント時にエディタの高さを画面の70%に設定
   useEffect(() => {
     setEditorHeight(window.innerHeight * 0.7);
   }, []);
@@ -47,6 +43,7 @@ export default function UserArticleForm() {
     tasklists: true,
   });
 
+  // 画像がクリップボードからペーストされた場合、画像を base64 化して挿入する
   const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const clipboardData = e.clipboardData;
     const items = clipboardData.items;
@@ -77,35 +74,17 @@ export default function UserArticleForm() {
       reader.onerror = (error) => reject(error);
     });
 
-  const onSubmit = async (data: ArticleFormData) => {
-    try {
-      const res = await fetch("/api/articles", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          title: data.title,
-          content: data.content,
-          topicId,
-          author: session?.user?.email,
-        }),
-      });
-      if (res.ok) {
-        alert("記事が正常に投稿されました");
-        router.push("/topics");
-      } else {
-        alert("記事の投稿に失敗しました");
-      }
-    } catch (error) {
-      console.error("投稿エラー:", error);
-      alert("記事の投稿中にエラーが発生しました");
-    }
+  const onSubmit = (data: ArticleFormData) => {
+    console.log("投稿する記事データ:", data);
+    // ここに API コールなど、バックエンドへの送信処理を実装する
   };
 
+  // 現在のトピックIDとフィルタ結果を確認
+  console.log("current topicId:", topicId);
   const filteredArticles = articles.filter(
     (article) => article.topicId === topicId
   );
+  console.log("filteredArticles:", filteredArticles);
 
   return (
     <Card className="m-8 p-8">
@@ -127,39 +106,11 @@ export default function UserArticleForm() {
           </ul>
         )}
       </CardContent>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <div>
-          <Input
-            placeholder="記事タイトル"
-            {...register("title", { required: "タイトルは必須です。" })}
-          />
-          {errors.title && (
-            <span className="text-red-500">{errors.title.message}</span>
-          )}
-        </div>
-        <div>
-          <ReactMde
-            value={markdown}
-            onChange={(value) => {
-              setMarkdown(value);
-              setValue("content", value);
-            }}
-            selectedTab={selectedTab}
-            onTabChange={setSelectedTab}
-            generateMarkdownPreview={(markdown) =>
-              Promise.resolve(converter.makeHtml(markdown))
-            }
-            minEditorHeight={editorHeight}
-            childProps={{
-              textArea: { onPaste: handlePaste },
-            }}
-          />
-          {errors.content && (
-            <span className="text-red-500">{errors.content.message}</span>
-          )}
-        </div>
-        <Button type="submit">投稿する</Button>
-      </form>
+      <div className="mt-4">
+        <Link href={`/topics/${topicId}/articles/new`}>
+          <Button>新規記事を作成</Button>
+        </Link>
+      </div>
     </Card>
   );
 }

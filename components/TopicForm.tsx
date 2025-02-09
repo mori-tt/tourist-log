@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { useSession } from "next-auth/react";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import ReactMde from "react-mde";
@@ -17,6 +18,7 @@ interface TopicFormData {
 }
 
 export default function TopicForm() {
+  const { data: session } = useSession();
   const {
     register,
     handleSubmit,
@@ -36,14 +38,13 @@ export default function TopicForm() {
   });
 
   const onSubmit = async (data: TopicFormData) => {
-    // 内容が5000文字以上であるかチェック
-    if (markdown.length < 5000) {
-      alert("トピック内容は最低5000文字必要です。");
+    if (!session?.user) {
+      alert("ユーザーが認証されていません。");
       return;
     }
-    // 画像は例として10枚以上必須とする
-    if (data.images.length < 10) {
-      alert("画像は10枚以上必要です。");
+
+    if (markdown.length < 20) {
+      alert("トピック内容は最低20文字必要です。");
       return;
     }
     data.content = markdown;
@@ -59,11 +60,10 @@ export default function TopicForm() {
           content: data.content,
           adFee: data.adFee,
           monthlyPVThreshold: data.monthlyPVThreshold,
-          // 実際はセッション情報から advertiserId を取得してください
-          advertiserId: "dummy-advertiser@example.com",
-          // 画像アップロードの処理は別途実装（例: Cloud Storage）
+          advertiserId: session.user.id,
         }),
       });
+
       if (res.ok) {
         alert("トピックが正常に作成されました。");
         reset();
@@ -73,6 +73,7 @@ export default function TopicForm() {
       }
     } catch (error) {
       console.error("トピック作成エラー:", error);
+      alert("トピック作成エラーが発生しました");
     }
   };
 
@@ -108,11 +109,7 @@ export default function TopicForm() {
       </div>
 
       <div>
-        <Input
-          type="file"
-          multiple
-          {...register("images", { required: "画像は必須です。" })}
-        />
+        <Input type="file" multiple {...register("images")} />
         {errors.images && (
           <span className="text-red-500">{errors.images.message}</span>
         )}
