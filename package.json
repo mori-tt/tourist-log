@@ -42,5 +42,10 @@
     "tailwindcss": "^3.4.1",
     "ts-node": "^10.9.2",
     "typescript": "^5"
+  },
+  "overrides": {
+    "react-mde": {
+      "react": "^19.0.0"
+    }
   }
 }
