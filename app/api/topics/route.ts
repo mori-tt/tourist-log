@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
 // GET リクエスト：全トピックを取得
-export async function GET(req: Request) {
+export async function GET() {
   try {
     const topics = await prisma.topic.findMany();
     return NextResponse.json(topics);
