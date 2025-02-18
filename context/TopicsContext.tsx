@@ -1,12 +1,9 @@
-"use client";
-
 import {
   createContext,
   useContext,
   useState,
-  ReactNode,
-  useCallback,
   useEffect,
+  ReactNode,
 } from "react";
 
 export interface Topic {
@@ -18,43 +15,59 @@ export interface Topic {
   advertiserId: string;
 }
 
-interface TopicsContextType {
+export interface TopicsContextType {
   topics: Topic[];
+  loading: boolean;
   addTopic: (topic: Topic) => void;
   deleteTopic: (id: number) => void;
-  setTopics: (topics: Topic[]) => void;
+  updateTopic: (updatedTopic: Topic) => void;
 }
 
 const TopicsContext = createContext<TopicsContextType | undefined>(undefined);
 
 export function TopicsProvider({ children }: { children: ReactNode }) {
   const [topics, setTopics] = useState<Topic[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const addTopic = useCallback((topic: Topic) => {
-    setTopics((prev) => [...prev, topic]);
-  }, []);
-
-  const deleteTopic = useCallback((id: number) => {
-    setTopics((prev) => prev.filter((topic) => topic.id !== id));
-  }, []);
-
-  // DB または API 経由で全トピックを取得し、Context を更新する (例: 初回読み込み時)
   useEffect(() => {
     async function fetchTopics() {
-      const res = await fetch("/api/topics");
-      if (res.ok) {
-        const data = await res.json();
-        setTopics(data);
-      } else {
-        console.error("トピック取得に失敗しました");
+      try {
+        const res = await fetch("/api/topics");
+        if (res.ok) {
+          const data = await res.json();
+          setTopics(data);
+        } else {
+          console.error("トピックの取得に失敗しました");
+        }
+      } catch (error) {
+        console.error("fetchTopicsエラー:", error);
+      } finally {
+        setLoading(false);
       }
     }
     fetchTopics();
   }, []);
 
+  const addTopic = (newTopic: Topic) => {
+    setTopics((prevTopics) => [...prevTopics, newTopic]);
+  };
+
+  const deleteTopic = (id: number) => {
+    // API呼び出し後に topics を更新するなどの処理を実装
+    setTopics(topics.filter((topic) => topic.id !== id));
+  };
+
+  const updateTopic = (updatedTopic: Topic) => {
+    setTopics((prevTopics) =>
+      prevTopics.map((topic) =>
+        topic.id === updatedTopic.id ? updatedTopic : topic
+      )
+    );
+  };
+
   return (
     <TopicsContext.Provider
-      value={{ topics, addTopic, deleteTopic, setTopics }}
+      value={{ topics, loading, addTopic, deleteTopic, updateTopic }}
     >
       {children}
     </TopicsContext.Provider>
@@ -63,7 +76,7 @@ export function TopicsProvider({ children }: { children: ReactNode }) {
 
 export function useTopics() {
   const context = useContext(TopicsContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error("useTopics must be used within a TopicsProvider");
   }
   return context;

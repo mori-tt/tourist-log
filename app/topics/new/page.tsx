@@ -94,8 +94,8 @@ export default function TopicPostPage() {
         </form>
       </CardContent>
       <div className="mt-4">
-        <Link href="/topics">
-          <Button variant="outline">トピック一覧へ</Button>
+        <Link href="/">
+          <Button variant="outline">ホームへ</Button>
         </Link>
       </div>
     </Card>

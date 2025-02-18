@@ -1,11 +1,10 @@
-"use client";
-
 import {
   createContext,
   useContext,
   useState,
   ReactNode,
   useCallback,
+  useEffect,
 } from "react";
 
 export interface Article {
@@ -16,6 +15,7 @@ export interface Article {
   tipAmount: number;
   isPurchased: boolean;
   topicId: number;
+  updatedAt: string;
 }
 
 export interface ArticlesContextType {
@@ -30,17 +30,7 @@ const ArticlesContext = createContext<ArticlesContextType | undefined>(
 );
 
 export function ArticlesProvider({ children }: { children: ReactNode }) {
-  const [articles, setArticles] = useState<Article[]>([
-    {
-      id: 1,
-      title: "初めての記事",
-      author: "管理者",
-      content: "これはダミーの記事です。",
-      tipAmount: 0,
-      isPurchased: false,
-      topicId: 0,
-    },
-  ]);
+  const [articles, setArticles] = useState<Article[]>([]);
 
   const addArticle = useCallback((article: Article) => {
     setArticles((prev) => [...prev, article]);
@@ -52,6 +42,20 @@ export function ArticlesProvider({ children }: { children: ReactNode }) {
 
   const deleteArticle = useCallback((id: number) => {
     setArticles((prev) => prev.filter((a) => a.id !== id));
+  }, []);
+
+  // ページ初回読み込み時にリモートのDBから記事一覧を取得
+  useEffect(() => {
+    async function fetchArticles() {
+      const res = await fetch("/api/articles");
+      if (res.ok) {
+        const data = await res.json();
+        setArticles(data);
+      } else {
+        console.error("記事情報の取得に失敗しました");
+      }
+    }
+    fetchArticles();
   }, []);
 
   return (

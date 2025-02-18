@@ -6,18 +6,17 @@ import { useSession, signIn } from "next-auth/react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import TopicsPage from "@/app/topics/page";
 
 export default function HomePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
-  // 管理者の場合はダッシュボードへリダイレクト
+  // 認証済みの場合は共通ダッシュボードへリダイレクト
   useEffect(() => {
-    if (status === "authenticated" && session?.user?.isAdmin) {
-      router.push("/admin");
+    if (status === "authenticated") {
+      router.push("/dashboard");
     }
-  }, [status, session, router]);
+  }, [status, router]);
 
   if (status === "loading") return <p>Loading...</p>;
 
@@ -25,7 +24,9 @@ export default function HomePage() {
     return (
       <Card className="m-8 p-8 flex flex-col items-center gap-4">
         <CardHeader>
-          <CardTitle className="text-3xl mb-4">Welcome</CardTitle>
+          <CardTitle className="text-3xl mb-4">
+            Welcome to Tourist Log
+          </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <Link href="/auth/user-signup">
@@ -40,6 +41,5 @@ export default function HomePage() {
     );
   }
 
-  // ログイン済みかつ一般ユーザーの場合は、トピック一覧画面を表示
-  return <TopicsPage />;
+  return null;
 }
