@@ -3,17 +3,32 @@ import prisma from "@/lib/prisma";
 
 export async function POST(req: Request) {
   try {
-    const { articleId, userEmail } = await req.json();
-    // ここで、受け取り処理（受領済みとしてマークする、またはウォレット連携処理を実施）を行う
-    // 例：dummyなトランザクションレコードを返す
-    const transactionRecord = {
-      id: 1,
-      articleId,
-      tipAmount: 100,
-      transactionHash: "dummy-hash",
-      type: "tip",
-    };
-    return NextResponse.json({ transaction: transactionRecord });
+    const { transactionId } = await req.json();
+    if (!transactionId) {
+      return NextResponse.json(
+        { error: "transactionId is required" },
+        { status: 400 }
+      );
+    }
+
+    // 該当取引が存在するか確認
+    const transaction = await prisma.transaction.findUnique({
+      where: { id: Number(transactionId) },
+    });
+    if (!transaction) {
+      return NextResponse.json(
+        { error: "Transaction not found" },
+        { status: 404 }
+      );
+    }
+
+    // 受領済みとしてマークする（isReceived フィールドを true に更新）
+    const updatedTransaction = await prisma.transaction.update({
+      where: { id: Number(transactionId) },
+      data: { isReceived: true },
+    });
+
+    return NextResponse.json({ transaction: updatedTransaction });
   } catch (error) {
     console.error("受け取りエラー:", error);
     return NextResponse.json(

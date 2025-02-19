@@ -3,13 +3,14 @@ import {
   Account,
   Deadline,
   NetworkType,
-  TransferTransaction,
+  TransferTransaction as SymbolTransferTransaction,
   PlainMessage,
   UInt64,
   Address,
+  SignedTransaction as SymbolSignedTransaction,
 } from "symbol-sdk";
 
-// 環境変数からノードURLを取得。存在しない場合はプレースホルダを利用
+// 環境変数からノードURLを取得。存在しない場合はエラー
 const nodeUrl = process.env.SYMBOL_NODE_URL;
 if (!nodeUrl) {
   throw new Error("SYMBOL_NODE_URL is not defined in environment variables");
@@ -21,17 +22,23 @@ export async function sendRewardTransaction(
   privateKey: string,
   recipientAddress: string,
   amount: number
-) {
+): Promise<{ transactionInfo: SymbolSignedTransaction; fee: string }> {
   const account = Account.createFromPrivateKey(privateKey, networkType);
   const epochAdjustment = Number(process.env.EPOCH_ADJUSTMENT) || 1616694977;
-  const transferTransaction = TransferTransaction.create(
+
+  let transferTransaction = SymbolTransferTransaction.create(
     Deadline.create(epochAdjustment),
     Address.createFromRawAddress(recipientAddress),
-    [], // トークン送付の場合はモザイクのリストを指定
+    [], // モザイクのリスト（今回は空）
     PlainMessage.create(`Reward payment of ${amount} tokens`),
     networkType,
     UInt64.fromUint(amount)
   );
+
+  // 手数料の計算：size プロパティを利用し、setMaxFee() で新しいインスタンスを取得
+  const feeMultiplier = Number(process.env.SYMBOL_FEE_MULTIPLIER) || 100;
+  const fee = UInt64.fromUint(transferTransaction.size * feeMultiplier);
+  transferTransaction = transferTransaction.setMaxFee(fee);
 
   const networkGenerationHash =
     process.env.NETWORK_GENERATION_HASH || "NETWORK_GENERATION_HASH_HERE";
@@ -41,7 +48,10 @@ export async function sendRewardTransaction(
   );
 
   const transactionHttp = repositoryFactory.createTransactionRepository();
-  // Use toPromise() instead of firstValueFrom for RxJS v6
   await transactionHttp.announce(signedTransaction).toPromise();
-  return { transactionInfo: signedTransaction };
+
+  return {
+    transactionInfo: signedTransaction,
+    fee: fee.toString(),
+  };
 }

@@ -25,7 +25,7 @@ export default function CompleteSignupForm({ role }: { role: string }) {
 
     if (res.ok) {
       setSubmitted(true);
-      router.replace(role === "advertiser" ? "/advertiser" : "/");
+      router.replace("/dashboard");
     } else {
       console.error("サインアップ完了に失敗しました");
       setIsSubmitting(false);

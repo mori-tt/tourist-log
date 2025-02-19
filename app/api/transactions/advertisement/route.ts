@@ -5,22 +5,23 @@ import { sendRewardTransaction } from "@/utils/symbol";
 export async function POST(req: Request) {
   try {
     const data = await req.json();
-    const { advertiserWalletPrivateKey, recipientAddress, adFee, topicId } =
+    const { senderWalletPrivateKey, recipientAddress, tipAmount, topicId } =
       data;
 
-    // 実際の送金処理を呼び出す
+    // Symbolブロックチェーンで投げ銭処理を実行
     const transactionResponse = await sendRewardTransaction(
-      advertiserWalletPrivateKey,
+      senderWalletPrivateKey,
       recipientAddress,
-      adFee
+      tipAmount
     );
 
-    // トランザクション履歴をDBに記録 (prisma.schema に Transaction モデルを追加する必要あり)
+    // DBに取引履歴を記録（type:"tip" を設定）
     const transactionRecord = await prisma.transaction.create({
       data: {
-        topicId,
-        adFee,
+        topicId: Number(topicId).toString(), // 数値を文字列に変換
+        adFee: 0, // tipの場合は広告料は0
         transactionHash: transactionResponse.transactionInfo.hash,
+        type: "advertisement",
       },
     });
 
@@ -29,7 +30,7 @@ export async function POST(req: Request) {
       blockchain: transactionResponse,
     });
   } catch (error) {
-    console.error("広告料送金トランザクションエラー:", error);
+    console.error("投げ銭トランザクションエラー:", error);
     return NextResponse.json({ error: "Transaction failed" }, { status: 500 });
   }
 }

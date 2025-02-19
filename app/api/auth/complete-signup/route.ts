@@ -8,10 +8,9 @@ const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };
 
 export async function PATCH(request: Request) {
-  // 現在のセッション情報を取得（セッション情報はDBのユーザーデータに対応する情報）
   const session = await getServerSession(authOptions);
+  console.log("取得したセッション:", session);
 
-  // セッションが存在しない、またはユーザーのメール情報がない場合はエラーを返す
   if (!session || !session.user?.email) {
     return NextResponse.json({ error: "認証されていません" }, { status: 401 });
   }
