@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { useSession, signIn } from "next-auth/react";
 import { useTopics } from "@/context/TopicsContext";
 import { Article, useArticles } from "@/context/ArticlesContext";
@@ -123,12 +124,18 @@ export default function DashboardPage() {
       {/* 一般ユーザーの場合 */}
       {isGeneral && (
         <div>
-          <section className="mb-8">
-            <h2 className="text-2xl font-bold mb-4">新規記事投稿</h2>
-            <Link href="/dashboard/articles/new">
-              <Button>新規記事投稿</Button>
-            </Link>
-          </section>
+          {topics.length > 0 ? (
+            <section className="mb-8">
+              <h2 className="text-2xl font-bold mb-4">新規記事投稿</h2>
+              <Link href="/article/new">
+                <Button>新規記事投稿</Button>
+              </Link>
+            </section>
+          ) : (
+            <p className="mb-8 text-red-500">
+              現在、投稿可能なトピックがありません。管理者にお問い合わせください。
+            </p>
+          )}
 
           <section className="mb-8">
             <h2 className="text-2xl font-bold mb-4">私の記事</h2>
@@ -139,56 +146,43 @@ export default function DashboardPage() {
               if (myArticles.length === 0) {
                 return <p>投稿した記事はありません。</p>;
               }
+
               // 記事をトピックごとにグループ化
               const articlesByTopic = myArticles.reduce((acc, article) => {
                 if (!acc[article.topicId]) acc[article.topicId] = [];
                 acc[article.topicId].push(article);
                 return acc;
               }, {} as { [key: number]: Article[] });
-              return Object.keys(articlesByTopic).map((topicId) => {
-                const topicDetails = topics.find(
-                  (t) => t.id === Number(topicId)
-                );
-                return (
-                  <div key={topicId} className="mb-4">
-                    <h3 className="text-xl font-semibold mb-2">
-                      {topicDetails ? topicDetails.title : "トピック情報なし"}
-                    </h3>
-                    {articlesByTopic[Number(topicId)].map(
-                      (article: Article) => (
-                        <Card key={article.id} className="mb-2">
-                          <CardHeader>
-                            <CardTitle className="text-lg font-bold">
-                              {article.title}
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div>
-                              <p>{article.content.slice(0, 100)}...</p>
-                              {/* 投稿日時 日と時間のみ　*/}
-                              <p className="text-sm text-gray-500 mt-4">
-                                更新日時: {article.updatedAt.split("T")[0]}
-                              </p>
-                              <p className="text-sm text-gray-500">
-                                作者: {article.author}
-                              </p>
-                              <p className="text-sm text-gray-500 mb-4">
-                                買取金額: {article.tipAmount}円
-                              </p>
-                            </div>
 
+              return Object.entries(articlesByTopic).map(
+                ([topicId, articles]) => (
+                  <div key={topicId}>
+                    <h3 className="text-xl font-semibold">
+                      トピック:{" "}
+                      {topics.find((t) => t.id === Number(topicId))?.title ||
+                        topicId}
+                    </h3>
+                    <ul className="space-y-4">
+                      {articles.map((article) => (
+                        <li key={article.id} className="border p-4 rounded">
+                          <h2 className="text-xl font-semibold">
                             <Link href={`/article/${article.id}`}>
-                              <Button variant="outline" size="sm">
-                                詳細
-                              </Button>
+                              {article.title}
                             </Link>
-                          </CardContent>
-                        </Card>
-                      )
-                    )}
+                          </h2>
+                          <p>{article.content.substring(0, 100)}...</p>
+                          <Link
+                            href={`/article/${article.id}/edit`}
+                            className="text-blue-500 underline"
+                          >
+                            編集
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                );
-              });
+                )
+              );
             })()}
           </section>
         </div>

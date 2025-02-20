@@ -18,10 +18,10 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const data = await req.json();
-    const { title, content, topicId, author } = data;
+    const { title, content, topicId, author, userId } = data;
 
-    if (!author) {
-      throw new Error("Author is required.");
+    if (!author || !userId) {
+      throw new Error("Author and userId are required.");
     }
 
     const newArticle = await prisma.article.create({
@@ -30,6 +30,7 @@ export async function POST(req: Request) {
         content,
         topicId,
         author,
+        user: { connect: { id: userId } },
       },
     });
 

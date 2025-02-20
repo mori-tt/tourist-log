@@ -1,12 +1,14 @@
 "use client";
-import React from "react";
-import { useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession, signIn } from "next-auth/react";
 import { useArticles } from "@/context/ArticlesContext";
 import { useForm } from "react-hook-form";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import ReactMde from "react-mde";
+import * as Showdown from "showdown";
+import "react-mde/lib/styles/css/react-mde-all.css";
 
 interface ArticleEditFormData {
   title: string;
@@ -21,6 +23,7 @@ export default function EditArticlePage() {
   const articleId = Number(params.id);
   const article = articles.find((a) => a.id === articleId);
   const router = useRouter();
+
   const { register, handleSubmit, setValue } = useForm<ArticleEditFormData>({
     defaultValues: {
       title: article?.title || "",
@@ -29,11 +32,17 @@ export default function EditArticlePage() {
     },
   });
 
+  // react-mde用の状態管理
+  const [selectedTab, setSelectedTab] = useState<"write" | "preview">("write");
+  const [markdown, setMarkdown] = useState(article?.content || "");
+  const [editorHeight, setEditorHeight] = useState(300);
+
   useEffect(() => {
     if (article) {
       setValue("title", article.title);
       setValue("content", article.content);
       setValue("tipAmount", article.tipAmount);
+      setMarkdown(article.content);
     }
   }, [article, setValue]);
 
@@ -45,6 +54,37 @@ export default function EditArticlePage() {
   if (!article || session.user.email !== article.author) {
     return <p>アクセス権がありません。</p>;
   }
+
+  // markdown変換用のコンバーター設定
+  const converter = new Showdown.Converter({
+    tables: true,
+    simplifiedAutoLink: true,
+    strikethrough: true,
+    tasklists: true,
+  });
+
+  // 画像をペースト時にBase64エンコードする例
+  const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const clipboardData = e.clipboardData;
+    const items = clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.indexOf("image") !== -1) {
+        const file = item.getAsFile();
+        if (file) {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = () => {
+            const base64 = reader.result as string;
+            const imageMarkdown = `![Image](${base64})\n`;
+            const updatedMarkdown = markdown + imageMarkdown;
+            setMarkdown(updatedMarkdown);
+            setValue("content", updatedMarkdown);
+          };
+        }
+      }
+    }
+  };
 
   const onSubmit = async (data: ArticleEditFormData) => {
     const res = await fetch(`/api/articles/${articleId}`, {
@@ -76,10 +116,21 @@ export default function EditArticlePage() {
             />
           </div>
           <div className="mb-4">
-            <textarea
-              {...register("content")}
-              placeholder="内容"
-              className="border p-2 w-full h-40"
+            <ReactMde
+              value={markdown}
+              onChange={(value) => {
+                setMarkdown(value);
+                setValue("content", value);
+              }}
+              selectedTab={selectedTab}
+              onTabChange={setSelectedTab}
+              generateMarkdownPreview={(markdown) =>
+                Promise.resolve(converter.makeHtml(markdown))
+              }
+              minEditorHeight={editorHeight}
+              childProps={{
+                textArea: { onPaste: handlePaste },
+              }}
             />
           </div>
           <div className="mb-4">

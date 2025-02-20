@@ -68,27 +68,19 @@ export default function UserArticleForm() {
       if (item.type.indexOf("image") !== -1) {
         const file = item.getAsFile();
         if (file) {
-          try {
-            const base64 = await fileToBase64(file);
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = () => {
+            const base64 = reader.result as string;
             const imageMarkdown = `![Image](${base64})\n`;
             const updatedMarkdown = markdown + imageMarkdown;
             setMarkdown(updatedMarkdown);
             setValue("content", updatedMarkdown);
-          } catch (error) {
-            console.error("画像変換エラー:", error);
-          }
+          };
         }
       }
     }
   };
-
-  const fileToBase64 = (file: File) =>
-    new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = (error) => reject(error);
-    });
 
   const onSubmit = async (data: ArticleFormData) => {
     try {
@@ -96,11 +88,10 @@ export default function UserArticleForm() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: data.title,
-          content: data.content,
-          topicId: topicId,
-          purchaseAmount: data.purchaseAmount,
+          ...data,
+          topicId: Number(data.topicId),
           author: session.user.email,
+          userId: session.user.id,
         }),
       });
       if (res.ok) {

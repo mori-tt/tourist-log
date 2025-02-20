@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useTopics } from "@/context/TopicsContext";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface TopicFormData {
   title: string;
@@ -20,6 +21,7 @@ export default function TopicPostPage() {
   const { data: session, status } = useSession();
   const { addTopic } = useTopics();
   const { register, handleSubmit, reset } = useForm<TopicFormData>();
+  const router = useRouter();
 
   if (status === "loading") return <p>Loading...</p>;
   if (!session || !(session.user.isAdvertiser || session.user.isAdmin)) {
@@ -33,7 +35,7 @@ export default function TopicPostPage() {
       content: data.content,
       adFee: data.adFee,
       monthlyPVThreshold: data.monthlyPVThreshold,
-      advertiserId: session.user.email || "",
+      advertiserId: session.user.id || "",
     };
 
     const res = await fetch("/api/topics", {
@@ -45,6 +47,7 @@ export default function TopicPostPage() {
       const createdTopic = await res.json();
       addTopic(createdTopic); // クライアント側の Context に追加
       reset();
+      router.push("/"); // 登録後、初期画面に遷移
     } else {
       console.error("トピックの保存に失敗しました");
     }

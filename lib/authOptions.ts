@@ -13,17 +13,54 @@ export const authOptions: NextAuthOptions = {
   ],
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
-    async session({ session }) {
-      if (session?.user?.email) {
+    // 初回サインイン時に user オブジェクトからトークンに必要な情報を加える
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+        token.isAdvertiser = user.isAdvertiser;
+        token.isAdmin = user.isAdmin;
+        token.isActive = user.isActive;
+        token.name = user.name;
+        token.email = user.email;
+      }
+      return token;
+    },
+    // 毎回、JWTトークンから session.user を再生成する
+    async session({ session, token }) {
+      // 必須プロパティを持つ初期値を設定する
+      if (!session.user)
+        session.user = {
+          id: "",
+          name: "",
+          email: "",
+          isActive: false,
+          isAdvertiser: false,
+          isAdmin: false,
+        };
+
+      // token が undefined でもエラーにならないように optional chaining を使用
+      const userEmail = token?.email || session.user.email;
+      if (userEmail) {
         const dbUser = await prisma.user.findUnique({
-          where: { email: session.user.email },
+          where: { email: userEmail },
+          select: {
+            id: true,
+            isAdvertiser: true,
+            isAdmin: true,
+            isActive: true,
+            name: true,
+            email: true,
+          },
         });
         if (dbUser) {
-          session.user.id = dbUser.id;
-          session.user.isAdvertiser = dbUser.isAdvertiser;
-          session.user.isAdmin = dbUser.isAdmin;
-          session.user.isActive = dbUser.isActive;
-          session.user.name = dbUser.name;
+          session.user = {
+            id: dbUser.id,
+            isAdvertiser: dbUser.isAdvertiser,
+            isAdmin: dbUser.isAdmin,
+            isActive: dbUser.isActive,
+            name: dbUser.name,
+            email: dbUser.email,
+          };
         }
       }
       return session;
