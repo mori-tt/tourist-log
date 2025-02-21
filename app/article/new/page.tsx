@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useTopics } from "@/context/TopicsContext";
-import { useSession } from "next-auth/react";
+import { useSession, signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkImageAttributes from "remark-image-attributes";
 import "react-mde/lib/styles/css/react-mde-all.css";
+import { useArticles } from "@/context/ArticlesContext";
 
 interface ArticleFormData {
   title: string;
@@ -25,11 +26,17 @@ export default function NewArticlePage() {
   const { data: session, status } = useSession();
   const { topics } = useTopics();
   const router = useRouter();
+  const { articles, addArticle } = useArticles();
   const { register, handleSubmit, setValue } = useForm<ArticleFormData>();
 
   const [selectedTab, setSelectedTab] = useState<"write" | "preview">("write");
   const [markdown, setMarkdown] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [editorHeight, setEditorHeight] = useState(300);
+
+  useEffect(() => {
+    setEditorHeight(window.innerHeight * 0.7);
+  }, []);
 
   // ペーストによる画像挿入処理（クリップボード画像を Base64 に変換）
   const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
@@ -76,26 +83,45 @@ export default function NewArticlePage() {
   };
 
   if (status === "loading") return <p>Loading...</p>;
-  // 一般ユーザー以外は記事投稿ができない
-  if (!session || session.user.isAdvertiser || session.user.isAdmin) {
+  if (!session) {
+    signIn();
+    return null;
+  }
+  if (session.user.isAdvertiser || session.user.isAdmin) {
     return <p>一般ユーザーのみ記事の投稿が可能です。</p>;
   }
 
   const onSubmit = async (data: ArticleFormData) => {
-    const res = await fetch("/api/articles", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...data,
-        topicId: Number(data.topicId), // API側で Number に変換する必要があればこちらでも変換
-        author: session.user.email,
-        userId: session.user.id,
-      }),
-    });
-    if (res.ok) {
-      router.push("/my-articles");
-    } else {
-      console.error("記事投稿に失敗しました");
+    // もし data.topicId が空の場合は送信を中断する
+    if (!data.topicId) {
+      alert("投稿するトピックを選択してください。");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/articles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...data,
+          // topicId はそのまま送信（数値変換はAPI内で実施するか、不要なら文字列のままでOK）
+          topicId: data.topicId,
+          author: session.user.email,
+          userId: session.user.id,
+        }),
+      });
+      if (res.ok) {
+        const createdArticle = await res.json();
+        addArticle(createdArticle);
+        router.refresh();
+        alert("記事が正常に投稿されました");
+        router.push("/");
+      } else {
+        alert("記事の投稿に失敗しました");
+      }
+    } catch (error) {
+      console.error("投稿エラー:", error);
+      alert("記事の投稿中にエラーが発生しました");
     }
   };
 
@@ -155,10 +181,11 @@ export default function NewArticlePage() {
             <select
               {...register("topicId", { required: true })}
               className="border p-2 w-full"
+              defaultValue=""
             >
               <option value="">トピックを選択</option>
               {topics.map((topic) => (
-                <option key={topic.id} value={topic.id}>
+                <option key={topic.id} value={String(topic.id)}>
                   {topic.title}
                 </option>
               ))}

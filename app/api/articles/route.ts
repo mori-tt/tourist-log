@@ -18,17 +18,24 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const data = await req.json();
-    const { title, content, topicId, author, userId } = data;
+    const { title, content, topicId: topicIdRaw, author, userId } = data;
 
     if (!author || !userId) {
       throw new Error("Author and userId are required.");
+    }
+    if (!topicIdRaw || topicIdRaw === "") {
+      throw new Error("Topic ID is required.");
+    }
+    const topicId = Number(topicIdRaw);
+    if (!topicId) {
+      throw new Error("Topic ID is invalid.");
     }
 
     const newArticle = await prisma.article.create({
       data: {
         title,
         content,
-        topicId,
+        topicId: topicIdRaw,
         author,
         user: { connect: { id: userId } },
       },
