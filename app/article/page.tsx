@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import { useSession, signIn } from "next-auth/react";
-import { useParams, useRouter } from "next/navigation";
-import { useArticles } from "@/context/ArticlesContext";
+import { useRouter } from "next/navigation";
+import { useArticles, ArticleFormData } from "@/context/ArticlesContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";
@@ -11,33 +11,56 @@ import ReactMde from "react-mde";
 import * as Showdown from "showdown";
 import "react-mde/lib/styles/css/react-mde-all.css";
 import { Input } from "@/components/ui/input";
-
-interface ArticleFormData {
-  title: string;
-  content: string;
-  topicId: string;
-  purchaseAmount: number;
-}
+import SafeImage from "@/components/SafeImage";
 
 export default function UserArticleForm() {
   const { data: session, status } = useSession();
-  const params = useParams();
   const router = useRouter();
-  const { articles, addArticle } = useArticles();
+  const { addArticle } = useArticles();
   const {
     register,
     handleSubmit,
     setValue,
     formState: { errors },
-    reset,
   } = useForm<ArticleFormData>();
   const [selectedTab, setSelectedTab] = useState<"write" | "preview">("write");
   const [markdown, setMarkdown] = useState("");
-  const [editorHeight, setEditorHeight] = useState(300);
+  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    setEditorHeight(window.innerHeight * 0.7);
-  }, []);
+  const converter = new Showdown.Converter({
+    tables: true,
+    simplifiedAutoLink: true,
+    strikethrough: true,
+    asklists: true,
+  });
+
+  const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    void e; // Mark the event as used to satisfy ESLint
+    // 必要に応じてペースト処理を実装
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUploadedImages((prev) => [...prev, data.url]);
+      } else {
+        console.error("画像のアップロードに失敗しました");
+      }
+    }
+  };
+
+  const handleImageButtonClick = () => {
+    fileInputRef.current?.click();
+  };
 
   if (status === "loading") return <p>Loading...</p>;
   if (!session) {
@@ -47,40 +70,6 @@ export default function UserArticleForm() {
   if (session.user.isAdvertiser || session.user.isAdmin) {
     return <p>一般ユーザーのみ記事の投稿が可能です。</p>;
   }
-
-  const topicId = Number(params.topicId);
-  const filteredArticles = articles.filter(
-    (article) => article.topicId === topicId
-  );
-
-  const converter = new Showdown.Converter({
-    tables: true,
-    simplifiedAutoLink: true,
-    strikethrough: true,
-    tasklists: true,
-  });
-
-  const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
-    const clipboardData = e.clipboardData;
-    const items = clipboardData.items;
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      if (item.type.indexOf("image") !== -1) {
-        const file = item.getAsFile();
-        if (file) {
-          const reader = new FileReader();
-          reader.readAsDataURL(file);
-          reader.onload = () => {
-            const base64 = reader.result as string;
-            const imageMarkdown = `![Image](${base64})\n`;
-            const updatedMarkdown = markdown + imageMarkdown;
-            setMarkdown(updatedMarkdown);
-            setValue("content", updatedMarkdown);
-          };
-        }
-      }
-    }
-  };
 
   const onSubmit = async (data: ArticleFormData) => {
     try {
@@ -92,13 +81,14 @@ export default function UserArticleForm() {
           topicId: Number(data.topicId),
           author: session.user.email,
           userId: session.user.id,
+          images: uploadedImages.map((url) => ({ url })),
         }),
       });
       if (res.ok) {
         const createdArticle = await res.json();
         addArticle(createdArticle);
         alert("記事が正常に投稿されました");
-        router.push("/topics");
+        router.push("/");
       } else {
         alert("記事の投稿に失敗しました");
       }
@@ -109,82 +99,82 @@ export default function UserArticleForm() {
   };
 
   return (
-    <Card className="m-8 p-8">
+    <Card>
       <CardHeader>
-        <CardTitle>トピック {topicId} の記事一覧</CardTitle>
+        <CardTitle>記事作成</CardTitle>
       </CardHeader>
       <CardContent>
-        {filteredArticles.length === 0 ? (
-          <p>このトピックに記事はまだありません。</p>
-        ) : (
-          <ul className="space-y-4">
-            {filteredArticles.map((article) => (
-              <li key={article.id} className="border p-4 rounded">
-                <h2 className="text-xl font-bold">{article.title}</h2>
-                <p>{article.content}</p>
-                <p className="text-sm text-gray-600">著者: {article.author}</p>
-                <p className="text-sm text-gray-600">
-                  買取金額: {article.tipAmount} 円
-                </p>
-                <p className="text-sm text-gray-600">
-                  投げ銭合計: {article.tipAmount} 円
-                </p>
-              </li>
-            ))}
-          </ul>
-        )}
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <div>
+            <Input
+              placeholder="記事タイトル"
+              {...register("title", { required: true })}
+            />
+            {errors.title && <span>タイトルは必須です</span>}
+          </div>
+          <div>
+            <Input
+              type="number"
+              placeholder="買取金額"
+              {...register("purchaseAmount", {
+                required: true,
+                valueAsNumber: true,
+              })}
+            />
+            {errors.purchaseAmount && <span>買取金額は必須です</span>}
+          </div>
+          <div>
+            <ReactMde
+              value={markdown}
+              onChange={(value) => {
+                setMarkdown(value);
+                setValue("content", value);
+              }}
+              selectedTab={selectedTab}
+              onTabChange={setSelectedTab}
+              generateMarkdownPreview={(markdown) =>
+                Promise.resolve(converter.makeHtml(markdown))
+              }
+              childProps={{ textArea: { onPaste: handlePaste } }}
+            />
+            {errors.content && <span>本文は必須です</span>}
+          </div>
+          <div>
+            <Button type="button" onClick={handleImageButtonClick}>
+              画像追加
+            </Button>
+            <input
+              type="file"
+              accept="image/*"
+              ref={fileInputRef}
+              className="hidden"
+              onChange={handleFileChange}
+            />
+          </div>
+          {uploadedImages.length > 0 && (
+            <div className="grid grid-cols-2 gap-4">
+              {uploadedImages.map((url, index) => (
+                <div key={index} className="relative h-32">
+                  <SafeImage
+                    src={url}
+                    alt={`Uploaded ${index}`}
+                    fill
+                    className="object-cover border rounded"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+          <div>
+            <label>トピック</label>
+            <select {...register("topicId", { required: true })}>
+              <option value="">トピックを選択</option>
+              {/* トピック一覧を適宜表示 */}
+            </select>
+          </div>
+          <Button type="submit">投稿する</Button>
+        </form>
       </CardContent>
-
-      {/* 新規記事を作成する */}
-      <h2 className="text-xl font-bold mt-6 mb-4">新規記事を作成</h2>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <div>
-          <Input
-            placeholder="記事タイトル"
-            {...register("title", { required: "タイトルは必須です。" })}
-          />
-          {errors.title && (
-            <span className="text-red-500">{errors.title.message}</span>
-          )}
-        </div>
-        <div>
-          <Input
-            type="number"
-            placeholder="買取金額"
-            {...register("purchaseAmount", {
-              required: "買取金額は必須です",
-              valueAsNumber: true,
-            })}
-          />
-          {errors.purchaseAmount && (
-            <span className="text-red-500">
-              {errors.purchaseAmount.message}
-            </span>
-          )}
-        </div>
-        <div>
-          <ReactMde
-            value={markdown}
-            onChange={(value) => {
-              setMarkdown(value);
-              setValue("content", value);
-            }}
-            selectedTab={selectedTab}
-            onTabChange={setSelectedTab}
-            generateMarkdownPreview={(markdown) =>
-              Promise.resolve(converter.makeHtml(markdown))
-            }
-            minEditorHeight={editorHeight}
-            childProps={{
-              textArea: { onPaste: handlePaste },
-            }}
-          />
-          {errors.content && (
-            <span className="text-red-500">{errors.content.message}</span>
-          )}
-        </div>
-        <Button type="submit">投稿する</Button>
-      </form>
     </Card>
   );
 }

@@ -1,4 +1,3 @@
-
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -27,20 +26,32 @@ model User {
   sessions  Session[]
 }
 
-model Article {
-  id          Int      @id @default(autoincrement())
-  title       String
-  content     String
-  author      String
-  tipAmount   Int      @default(0)
-  isPurchased Boolean  @default(false)
-  viewCount   Int      @default(0)
-  topicId     String?  // 外部キーをStringに変更
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
 
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
+model Article {
+  id             Int            @id @default(autoincrement())
+  title          String
+  content        String
+  author         String
+  tipAmount      Int?           @default(0)
+  purchaseAmount Int?           @default(0)
+  isPurchased    Boolean        @default(false)
+  viewCount      Int            @default(0)
+  topicId        Int?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  userId         String
+  user           User           @relation(fields: [userId], references: [id])
+  topic          Topic?         @relation(fields: [topicId], references: [id])
+  
+  images         ArticleImage[]
+}
+
+model ArticleImage {
+  id        Int      @id @default(autoincrement())
+  url       String
+  article   Article  @relation(fields: [articleId], references: [id])
+  articleId Int
+  createdAt DateTime @default(now())
 }
 
 model Topic {
@@ -54,6 +65,8 @@ model Topic {
   updatedAt          DateTime  @updatedAt
 
   advertiser User @relation(fields: [advertiserId], references: [id])
+  // 逆方向のリレーションを追加する場合:
+  articles   Article[]
 }
 
 model Account {
@@ -92,7 +105,7 @@ model VerificationToken {
 
 model Transaction {
   id                Int             @id @default(autoincrement())
-  topicId           String          // 外部キーをStringに変更
+  topicId           Int
   adFee             Float
   transactionHash   String
   type              TransactionType

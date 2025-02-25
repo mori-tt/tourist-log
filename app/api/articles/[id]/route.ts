@@ -8,11 +8,23 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = params;
+    // params を await してから利用
+    const { id } = await Promise.resolve(params);
     const data = await req.json();
+    const { images, ...rest } = data;
     const updatedArticle = await prisma.article.update({
       where: { id: Number(id) },
-      data,
+      data: {
+        ...rest,
+        // 画像情報が送信されている場合、既存の画像を一旦全削除して新たに登録
+        ...(images !== undefined && {
+          images: {
+            deleteMany: {},
+            create: images.map((item: { url: string }) => ({ url: item.url })),
+          },
+        }),
+      },
+      include: { images: true },
     });
     return NextResponse.json(updatedArticle);
   } catch (error) {

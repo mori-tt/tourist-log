@@ -4,7 +4,7 @@ import { sendRewardTransaction } from "@/utils/symbol";
 import { TransactionType } from "@prisma/client";
 
 // GETメソッド：DB から「type」が "tip" の取引一覧を取得
-export async function GET(req: Request) {
+export async function GET(_req: Request) {
   try {
     const transactions = await prisma.transaction.findMany({
       where: { type: "tip" },

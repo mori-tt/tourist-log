@@ -15,7 +15,7 @@ export default function MyArticlesPage() {
     return null;
   }
 
-  // 現在のユーザーが投稿した記事のみフィルタリング
+  // 現在のユーザーが投稿した記事のみを抽出
   const myArticles = articles.filter(
     (article) => article.author === session.user.email
   );
@@ -37,10 +37,10 @@ export default function MyArticlesPage() {
                 </h2>
                 <p>{article.content.substring(0, 100)}...</p>
                 <Link
-                  href={`/article/${article.id}/edit`}
+                  href={`/article/${article.id}`}
                   className="text-blue-500 underline"
                 >
-                  編集
+                  詳細
                 </Link>
               </li>
             ))}

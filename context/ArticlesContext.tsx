@@ -13,9 +13,23 @@ export interface Article {
   author: string;
   content: string;
   tipAmount: number;
+  purchaseAmount: number;
   isPurchased: boolean;
   topicId: number;
   updatedAt: string;
+  images: { url: string }[];
+  topic?: {
+    id: number;
+    title: string;
+  };
+  userId: string;
+}
+
+export interface ArticleFormData {
+  title: string;
+  content: string;
+  topicId: number;
+  purchaseAmount: number;
 }
 
 export interface ArticlesContextType {
@@ -32,30 +46,37 @@ const ArticlesContext = createContext<ArticlesContextType | undefined>(
 export function ArticlesProvider({ children }: { children: ReactNode }) {
   const [articles, setArticles] = useState<Article[]>([]);
 
+  const fetchArticles = async () => {
+    try {
+      const res = await fetch("/api/articles");
+      if (res.ok) {
+        const data = await res.json();
+        // GET 時、画像リレーションが含まれている前提
+        setArticles(data);
+      }
+    } catch (error) {
+      console.error("記事の取得に失敗しました", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchArticles();
+  }, []);
+
   const addArticle = useCallback((article: Article) => {
     setArticles((prev) => [...prev, article]);
   }, []);
 
-  const updateArticle = useCallback((article: Article) => {
-    setArticles((prev) => prev.map((a) => (a.id === article.id ? article : a)));
+  const updateArticle = useCallback((updatedArticle: Article) => {
+    setArticles((prev) =>
+      prev.map((article) =>
+        article.id === updatedArticle.id ? updatedArticle : article
+      )
+    );
   }, []);
 
   const deleteArticle = useCallback((id: number) => {
-    setArticles((prev) => prev.filter((a) => a.id !== id));
-  }, []);
-
-  // ページ初回読み込み時にリモートのDBから記事一覧を取得
-  useEffect(() => {
-    async function fetchArticles() {
-      const res = await fetch("/api/articles");
-      if (res.ok) {
-        const data = await res.json();
-        setArticles(data);
-      } else {
-        console.error("記事情報の取得に失敗しました");
-      }
-    }
-    fetchArticles();
+    setArticles((prev) => prev.filter((article) => article.id !== id));
   }, []);
 
   return (

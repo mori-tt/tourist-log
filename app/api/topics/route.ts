@@ -45,23 +45,13 @@ export async function POST(req: Request) {
       );
     }
 
-    // もしadvertiserIdがメールアドレスのような文字列ではなく、ユーザーID (数値) を期待する場合は、
-    // 以下のように変換・チェックする処理を追加してください
-    // const _advertiserId = Number(advertiserId);
-    // if (Number.isNaN(_advertiserId)) {
-    //   return NextResponse.json(
-    //     { error: "advertiserIdの形式が正しくありません" },
-    //     { status: 400 }
-    //   );
-    // }
-
     const newTopic = await prisma.topic.create({
       data: {
         title,
         content,
         adFee: _adFee,
         monthlyPVThreshold: _monthlyPVThreshold,
-        advertiserId, // 必要に応じて_advertiserIdへ変更
+        advertiserId,
       },
     });
 

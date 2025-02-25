@@ -18,7 +18,7 @@ export async function POST(req: Request) {
     // DBに取引履歴を記録（type:"tip" を設定）
     const transactionRecord = await prisma.transaction.create({
       data: {
-        topicId: Number(topicId).toString(), // 数値を文字列に変換
+        topicId: Number(topicId),
         adFee: 0, // tipの場合は広告料は0
         transactionHash: transactionResponse.transactionInfo.hash,
         type: "advertisement",

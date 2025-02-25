@@ -1,44 +1,41 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { useTopics } from "@/context/TopicsContext";
+import React, { useState, useRef } from "react";
 import { useSession, signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import Link from "next/link";
 import ReactMde from "react-mde";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import remarkImageAttributes from "remark-image-attributes";
 import "react-mde/lib/styles/css/react-mde-all.css";
-import { useArticles } from "@/context/ArticlesContext";
-
-interface ArticleFormData {
-  title: string;
-  content: string;
-  topicId: string;
-}
+import Showdown from "showdown";
+import { useArticles, ArticleFormData } from "@/context/ArticlesContext";
+import { useTopics } from "@/context/TopicsContext";
+import SafeImage from "@/components/SafeImage";
 
 export default function NewArticlePage() {
   const { data: session, status } = useSession();
-  const { topics } = useTopics();
   const router = useRouter();
-  const { articles, addArticle } = useArticles();
-  const { register, handleSubmit, setValue } = useForm<ArticleFormData>();
-
-  const [selectedTab, setSelectedTab] = useState<"write" | "preview">("write");
+  const { addArticle } = useArticles();
+  const { topics } = useTopics();
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    formState: { errors },
+  } = useForm<ArticleFormData>();
   const [markdown, setMarkdown] = useState("");
+  const [selectedTab, setSelectedTab] = useState<"write" | "preview">("write");
+  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [editorHeight, setEditorHeight] = useState(300);
+  const converter = new Showdown.Converter({
+    tables: true,
+    simplifiedAutoLink: true,
+    strikethrough: true,
+    asklists: true,
+  });
 
-  useEffect(() => {
-    setEditorHeight(window.innerHeight * 0.7);
-  }, []);
-
-  // ペーストによる画像挿入処理（クリップボード画像を Base64 に変換）
   const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const clipboardData = e.clipboardData;
     const items = clipboardData.items;
@@ -47,73 +44,61 @@ export default function NewArticlePage() {
       if (item.type.indexOf("image") !== -1) {
         const file = item.getAsFile();
         if (file) {
-          const reader = new FileReader();
-          reader.readAsDataURL(file);
-          reader.onload = () => {
-            const base64 = reader.result as string;
-            const imageMarkdown = `![Image](${base64})\n`;
-            const updatedMarkdown = markdown + imageMarkdown;
-            setMarkdown(updatedMarkdown);
-            setValue("content", updatedMarkdown);
-          };
+          const formData = new FormData();
+          formData.append("file", file);
+          const res = await fetch("/api/upload", {
+            method: "POST",
+            body: formData,
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setUploadedImages((prev) => [...prev, data.url]);
+          } else {
+            console.error("画像のアップロードに失敗しました（ペースト）");
+          }
         }
       }
     }
   };
 
-  // ファイル選択による画像アップロード処理
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => {
-        const base64 = reader.result as string;
-        const imageMarkdown = `![Image](${base64})\n`;
-        const updatedMarkdown = markdown + imageMarkdown;
-        setMarkdown(updatedMarkdown);
-        setValue("content", updatedMarkdown);
-      };
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUploadedImages((prev) => [...prev, data.url]);
+      } else {
+        console.error("画像のアップロードに失敗しました");
+      }
     }
   };
 
-  // 画像追加ボタン押下時、隠しファイル入力をクリック
   const handleImageButtonClick = () => {
     fileInputRef.current?.click();
   };
 
-  if (status === "loading") return <p>Loading...</p>;
-  if (!session) {
-    signIn();
-    return null;
-  }
-  if (session.user.isAdvertiser || session.user.isAdmin) {
-    return <p>一般ユーザーのみ記事の投稿が可能です。</p>;
-  }
-
   const onSubmit = async (data: ArticleFormData) => {
-    // もし data.topicId が空の場合は送信を中断する
-    if (!data.topicId) {
-      alert("投稿するトピックを選択してください。");
-      return;
-    }
-
     try {
       const res = await fetch("/api/articles", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...data,
-          // topicId はそのまま送信（数値変換はAPI内で実施するか、不要なら文字列のままでOK）
-          topicId: data.topicId,
-          author: session.user.email,
-          userId: session.user.id,
+          topicId: Number(data.topicId),
+          author: session?.user?.email || "",
+          userId: session?.user?.id || "",
+          images: uploadedImages.map((url) => ({ url })),
         }),
       });
       if (res.ok) {
         const createdArticle = await res.json();
         addArticle(createdArticle);
-        router.refresh();
         alert("記事が正常に投稿されました");
         router.push("/");
       } else {
@@ -125,46 +110,57 @@ export default function NewArticlePage() {
     }
   };
 
+  if (status === "loading") return <p>Loading...</p>;
+  if (!session) {
+    signIn();
+    return null;
+  }
+  if (session.user.isAdvertiser || session.user.isAdmin) {
+    return <p>一般ユーザーのみ記事の投稿が可能です。</p>;
+  }
+
   return (
-    <Card className="m-8 p-8">
+    <Card>
       <CardHeader>
-        <CardTitle>新規記事投稿</CardTitle>
+        <CardTitle>新規記事作成</CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 mb-4">
+        <form onSubmit={handleSubmit(onSubmit)}>
           <div>
-            <label className="block mb-1">記事タイトル</label>
             <Input
+              placeholder="記事タイトル"
               {...register("title", { required: true })}
-              placeholder="タイトル"
             />
+            {errors.title && <span>タイトルは必須です</span>}
           </div>
           <div>
-            <label className="block mb-1">内容 (Markdown対応)</label>
-            <div className="mb-2">
-              <ReactMde
-                value={markdown}
-                onChange={(value) => {
-                  setMarkdown(value);
-                  setValue("content", value);
-                }}
-                selectedTab={selectedTab}
-                onTabChange={setSelectedTab}
-                // プレビュー生成で ReactMarkdown を利用。remark-gfm, remark-image-attributes により
-                // 画像に対し幅や高さ、配置などの属性が指定可能となります。
-                generateMarkdownPreview={(markdown) =>
-                  Promise.resolve(
-                    <ReactMarkdown
-                      children={markdown}
-                      remarkPlugins={[remarkGfm, remarkImageAttributes]}
-                    />
-                  )
-                }
-                childProps={{
-                  textArea: { onPaste: handlePaste },
-                }}
-              />
-            </div>
+            <Input
+              type="number"
+              placeholder="買取金額"
+              {...register("purchaseAmount", {
+                required: true,
+                valueAsNumber: true,
+              })}
+            />
+            {errors.purchaseAmount && <span>買取金額は必須です</span>}
+          </div>
+          <div>
+            <ReactMde
+              value={markdown}
+              onChange={(value) => {
+                setMarkdown(value);
+                setValue("content", value);
+              }}
+              selectedTab={selectedTab}
+              onTabChange={setSelectedTab}
+              generateMarkdownPreview={(markdown) =>
+                Promise.resolve(converter.makeHtml(markdown))
+              }
+              childProps={{ textArea: { onPaste: handlePaste } }}
+            />
+            {errors.content && <span>本文は必須です</span>}
+          </div>
+          <div>
             <Button type="button" onClick={handleImageButtonClick}>
               画像追加
             </Button>
@@ -176,28 +172,33 @@ export default function NewArticlePage() {
               onChange={handleFileChange}
             />
           </div>
+          {uploadedImages.length > 0 && (
+            <div className="grid grid-cols-2 gap-4">
+              {uploadedImages.map((url, index) => (
+                <div key={index} className="relative h-32">
+                  <SafeImage
+                    src={url}
+                    alt={`Uploaded ${index}`}
+                    fill
+                    className="object-cover border rounded"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
           <div>
-            <label className="block mb-1">投稿するトピック</label>
-            <select
-              {...register("topicId", { required: true })}
-              className="border p-2 w-full"
-              defaultValue=""
-            >
+            <label>トピック</label>
+            <select {...register("topicId", { required: true })}>
               <option value="">トピックを選択</option>
               {topics.map((topic) => (
-                <option key={topic.id} value={String(topic.id)}>
+                <option key={topic.id} value={topic.id}>
                   {topic.title}
                 </option>
               ))}
             </select>
           </div>
-          <div>
-            <Button type="submit">投稿する</Button>
-          </div>
+          <Button type="submit">投稿する</Button>
         </form>
-        <Link href="/">
-          <Button variant="outline">戻る</Button>
-        </Link>
       </CardContent>
     </Card>
   );

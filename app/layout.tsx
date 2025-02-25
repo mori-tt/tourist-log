@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Tourist Log",
-  description: "観光情報アプリ",
+  description: "観光情報投稿ログ",
 };
 
 export default function RootLayout({

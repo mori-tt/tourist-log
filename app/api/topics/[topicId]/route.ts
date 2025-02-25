@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma";
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { topicId: string } }
+  { params }: { params: { topicId: number } }
 ) {
   try {
     const { topicId } = params;

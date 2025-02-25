@@ -1,10 +1,10 @@
 "use client";
 
+import React, { useEffect } from "react";
 import { useSession, signIn } from "next-auth/react";
 import { useTopics } from "@/context/TopicsContext";
 import { useRouter, useParams } from "next/navigation";
 import { useForm } from "react-hook-form";
-import { useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -40,15 +40,14 @@ export default function TopicEditPage() {
     return null;
   }
 
-  // 編集可能か判定：広告主本人のみ編集を許可
+  // 編集可能か判定：広告主本人のみ編集可
   const isEditable =
     session.user.isAdvertiser &&
     topic &&
     session.user.id === topic.advertiserId;
-
-  //管理者と投稿した広告主のみ削除できる
+  // 管理者または該当広告主のみ削除可能
   const isDeletable =
-    session.user.isAdmin || session.user.email === topic?.advertiserId;
+    session.user.isAdmin || session.user.id === topic?.advertiserId;
 
   const onSubmit = async (data: TopicFormData) => {
     const res = await fetch(`/api/topics/${topicId}`, {
@@ -59,7 +58,7 @@ export default function TopicEditPage() {
     if (res.ok) {
       const updatedTopic = await res.json();
       updateTopic(updatedTopic);
-      router.push("/dashboard"); // 更新後は共通ダッシュボードへ戻る
+      router.push("/dashboard");
     } else {
       console.error("トピック更新に失敗しました");
     }
@@ -112,7 +111,10 @@ export default function TopicEditPage() {
               {isEditable ? (
                 <input
                   type="number"
-                  {...register("adFee", { valueAsNumber: true })}
+                  {...register("adFee", {
+                    required: true,
+                    valueAsNumber: true,
+                  })}
                   className="border p-2 w-full"
                 />
               ) : (
@@ -124,7 +126,10 @@ export default function TopicEditPage() {
               {isEditable ? (
                 <input
                   type="number"
-                  {...register("monthlyPVThreshold", { valueAsNumber: true })}
+                  {...register("monthlyPVThreshold", {
+                    required: true,
+                    valueAsNumber: true,
+                  })}
                   className="border p-2 w-full"
                 />
               ) : (

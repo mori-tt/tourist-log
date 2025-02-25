@@ -2,7 +2,6 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 
 interface Transaction {
   id: number;
