@@ -3,10 +3,10 @@ import prisma from "@/lib/prisma";
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { topicId: number } }
+  { params }: { params: Promise<{ topicId: number }> }
 ) {
   try {
-    const { topicId } = params;
+    const { topicId } = await params;
     const data = await req.json();
     const updatedTopic = await prisma.topic.update({
       where: { id: Number(topicId) },

@@ -109,6 +109,7 @@ model Transaction {
   adFee             Float
   transactionHash   String
   type              TransactionType
+  isReceived        Boolean         @default(false)
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 

@@ -5,11 +5,11 @@ import { authOptions } from "@/lib/authOptions";
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
-) {
+  context: { params: Promise<{ id: string }> }
+): Promise<Response> {
   try {
-    // params を await してから利用
-    const { id } = await Promise.resolve(params);
+    const { params } = await context;
+    const id = (await params).id;
     const data = await req.json();
     const { images, ...rest } = data;
     const updatedArticle = await prisma.article.update({
@@ -38,15 +38,15 @@ export async function PATCH(
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
-) {
+  context: { params: Promise<{ id: string }> }
+): Promise<Response> {
+  const { params } = await context;
+  const id = (await params).id;
   const session = await getServerSession(authOptions);
   if (!session || !session.user?.isAdmin) {
     return NextResponse.json({ error: "権限がありません" }, { status: 401 });
   }
-
   try {
-    const { id } = params;
     const deletedArticle = await prisma.article.delete({
       where: { id: Number(id) },
     });

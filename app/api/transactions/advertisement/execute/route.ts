@@ -60,7 +60,7 @@ export async function POST(req: Request) {
     // DBに送金トランザクション情報を記録
     const transactionRecord = await prisma.transaction.create({
       data: {
-        articleId: article.id,
+        topicId: Number(article.topicId),
         adFee,
         transactionHash: transactionResponse.transactionInfo.hash,
         type: "advertisement",

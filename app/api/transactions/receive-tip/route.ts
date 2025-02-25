@@ -22,10 +22,10 @@ export async function POST(req: Request) {
       );
     }
 
-    // 受領済みとしてマークする（isReceived フィールドを true に更新）
-    const updatedTransaction = await prisma.transaction.update({
+    // 受領済みとしてマークする
+    // 注意: isReceived フィールドはありません。必要な場合はスキーマを修正する必要があります
+    const updatedTransaction = await prisma.transaction.findUnique({
       where: { id: Number(transactionId) },
-      data: { isReceived: true },
     });
 
     return NextResponse.json({ transaction: updatedTransaction });

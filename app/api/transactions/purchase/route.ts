@@ -60,8 +60,8 @@ export async function POST(req: Request) {
     // DBに取引情報を記録（購入時は tipAmount フィールドを購入額として利用）
     const transactionRecord = await prisma.transaction.create({
       data: {
-        articleId: Number(articleId),
-        tipAmount: purchaseAmount,
+        topicId: Number(article.topicId),
+        adFee: purchaseAmount,
         transactionHash: transactionResponse.transactionInfo.hash,
         type: "purchase",
       },
