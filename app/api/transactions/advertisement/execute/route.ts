@@ -62,6 +62,7 @@ export async function POST(req: Request) {
       data: {
         topicId: Number(article.topicId),
         adFee,
+        xymAmount: adFee,
         transactionHash: transactionResponse.transactionInfo.hash,
         type: "advertisement",
       },

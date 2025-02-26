@@ -65,7 +65,7 @@ export default function DashboardPage() {
                   <CardContent>
                     <p className="text-sm text-gray-500">{topic.content}</p>
                     <p className="text-sm text-gray-500">
-                      広告料: {topic.adFee}円
+                      広告料: {topic.adFee}XYM
                     </p>
                     <p className="text-sm text-gray-500 mb-4">
                       月間PV支払い基準: {topic.monthlyPVThreshold}
@@ -97,7 +97,7 @@ export default function DashboardPage() {
                                 作者: {article.author}
                               </p>
                               <p className="text-sm text-gray-500 mb-4">
-                                買取金額: {article.purchaseAmount}円
+                                買取金額: {article.xymPrice}XYM
                               </p>
                             </div>
                             <Link href={`/article/${article.id}`}>

@@ -26,20 +26,29 @@ export async function POST(req: Request) {
     const { senderWalletPrivateKey, recipientAddress, tipAmount, topicId } =
       data;
 
-    // Symbolブロックチェーンで投げ銭処理を実行
+    // 金額が0以下の場合はエラー
+    if (tipAmount <= 0) {
+      return NextResponse.json(
+        { error: "XYM amount must be greater than 0" },
+        { status: 400 }
+      );
+    }
+
+    // Symbolブロックチェーンで投げ銭処理を実行（金額はXYM単位）
     const transactionResponse = await sendRewardTransaction(
       senderWalletPrivateKey,
       recipientAddress,
       tipAmount
     );
 
-    // DBに取引履歴を記録
+    // DBに取引履歴を記録（金額情報も含める）
     const transactionRecord = await prisma.transaction.create({
       data: {
-        topicId: topicId, // String型なのでキャスト不要
+        topicId: topicId,
         adFee: 0, // Tipの場合は広告料は0
+        xymAmount: parseFloat(tipAmount), // XYM単位の金額
         transactionHash: transactionResponse.transactionInfo.hash,
-        type: TransactionType.tip, // Enumを使用
+        type: TransactionType.tip,
       },
     });
 

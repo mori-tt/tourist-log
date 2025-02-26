@@ -118,7 +118,7 @@ export default function TopicEditPage() {
                   className="border p-2 w-full"
                 />
               ) : (
-                <p>{topic.adFee} 円</p>
+                <p>{topic.adFee} XYM</p>
               )}
             </div>
             <div className="mb-4">
@@ -136,7 +136,7 @@ export default function TopicEditPage() {
                 <p>{topic.monthlyPVThreshold}</p>
               )}
             </div>
-            <div className="mb-4">
+            <div className="mb-4 flex gap-4">
               {isEditable && <Button type="submit">更新</Button>}
               {isDeletable && (
                 <Button

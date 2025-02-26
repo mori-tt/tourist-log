@@ -13,7 +13,7 @@ export interface Article {
   author: string;
   content: string;
   tipAmount: number;
-  purchaseAmount: number;
+  xymPrice: number;
   isPurchased: boolean;
   topicId: number;
   updatedAt: string;
@@ -24,12 +24,11 @@ export interface Article {
   };
   userId: string;
 }
-
 export interface ArticleFormData {
   title: string;
   content: string;
   topicId: number;
-  purchaseAmount: number;
+  xymPrice: number;
 }
 
 export interface ArticlesContextType {

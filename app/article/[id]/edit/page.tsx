@@ -34,7 +34,7 @@ export default function EditArticlePage() {
       title: article?.title || "",
       content: article?.content || "",
       topicId: article?.topicId || 0,
-      purchaseAmount: article?.purchaseAmount || 0,
+      xymPrice: article?.xymPrice || 0,
     },
   });
 
@@ -54,7 +54,7 @@ export default function EditArticlePage() {
       setValue("title", article.title);
       setValue("content", article.content);
       setValue("topicId", article.topicId);
-      setValue("purchaseAmount", article.purchaseAmount);
+      setValue("xymPrice", article.xymPrice);
       setMarkdown(article.content);
       if (article.images && article.images.length > 0) {
         setUploadedImages(
@@ -158,42 +158,60 @@ export default function EditArticlePage() {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)}>
-          <div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">
+              タイトル
+            </label>
             <Input
               placeholder="タイトル"
               {...register("title", { required: true })}
+              className="w-full"
             />
-            {errors.title && <span>タイトルは必須です</span>}
+            {errors.title && (
+              <span className="text-red-600 text-xs">タイトルは必須です</span>
+            )}
           </div>
-          <div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">
+              買取金額
+            </label>
             <Input
               type="number"
               placeholder="買取金額"
-              {...register("purchaseAmount", {
-                required: true,
-                valueAsNumber: true,
-              })}
+              {...register("xymPrice", { required: true, valueAsNumber: true })}
+              className="w-full"
             />
-            {errors.purchaseAmount && <span>買取金額は必須です</span>}
+            {errors.xymPrice && (
+              <span className="text-red-600 text-xs">買取金額は必須です</span>
+            )}
           </div>
-          <div>
-            <ReactMde
-              value={markdown}
-              onChange={(value) => {
-                setMarkdown(value);
-                setValue("content", value);
-              }}
-              selectedTab={selectedTab}
-              onTabChange={setSelectedTab}
-              generateMarkdownPreview={(markdown) =>
-                Promise.resolve(converter.makeHtml(markdown))
-              }
-              childProps={{ textArea: { onPaste: handlePaste } }}
-            />
-            {errors.content && <span>本文は必須です</span>}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">本文</label>
+            <div className="border rounded-lg p-2">
+              <ReactMde
+                value={markdown}
+                onChange={(value) => {
+                  setMarkdown(value);
+                  setValue("content", value);
+                }}
+                selectedTab={selectedTab}
+                onTabChange={setSelectedTab}
+                generateMarkdownPreview={(markdown) =>
+                  Promise.resolve(converter.makeHtml(markdown))
+                }
+                childProps={{ textArea: { onPaste: handlePaste } }}
+              />
+            </div>
+            {errors.content && (
+              <span className="text-red-600 text-xs">本文は必須です</span>
+            )}
           </div>
-          <div>
-            <Button type="button" onClick={handleImageButtonClick}>
+          <div className="space-y-2">
+            <Button
+              type="button"
+              onClick={handleImageButtonClick}
+              className="mb-2"
+            >
               画像追加
             </Button>
             <input
@@ -205,27 +223,38 @@ export default function EditArticlePage() {
             />
           </div>
           {uploadedImages.length > 0 && (
-            <div>
+            <div className="space-y-4">
               {uploadedImages.map((url, index) => (
-                <div key={index}>
-                  <Image
-                    src={url}
-                    alt={`Uploaded ${index}`}
-                    style={{ maxWidth: "200px" }}
-                  />
-                  <Button
-                    type="button"
-                    onClick={() => handleDeleteImage(index)}
-                  >
-                    削除
-                  </Button>
+                <div key={index} className="border p-2 rounded">
+                  <div className="relative w-full h-80">
+                    <Image
+                      src={url}
+                      alt={`Uploaded ${index}`}
+                      fill
+                      className="object-contain rounded"
+                    />
+                  </div>
+                  <div className="mt-2">
+                    <Button
+                      type="button"
+                      onClick={() => handleDeleteImage(index)}
+                      variant="destructive"
+                    >
+                      削除
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
           )}
-          <div>
-            <label>トピック</label>
-            <select {...register("topicId", { required: true })}>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">
+              トピック
+            </label>
+            <select
+              {...register("topicId", { required: true })}
+              className="w-full border rounded px-3 py-2"
+            >
               <option value="">トピックを選択</option>
               {topics.map((topic) => (
                 <option key={topic.id} value={topic.id}>
@@ -234,7 +263,16 @@ export default function EditArticlePage() {
               ))}
             </select>
           </div>
-          <Button type="submit">更新する</Button>
+          <div className="flex gap-4 mt-6">
+            <Button
+              type="button"
+              onClick={() => router.back()}
+              variant="outline"
+            >
+              戻る
+            </Button>
+            <Button type="submit">更新する</Button>
+          </div>
         </form>
       </CardContent>
     </Card>

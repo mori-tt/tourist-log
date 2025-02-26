@@ -19,8 +19,8 @@ export async function POST(req: Request) {
       );
     }
 
-    // 購入金額が最低額（例: 1000円）以上かチェック
-    if (purchaseAmount < 1000) {
+    // 購入金額が最低額（例: 10XYM）以上かチェック
+    if (purchaseAmount < 10) {
       return NextResponse.json(
         { error: "Purchase amount is insufficient" },
         { status: 400 }
@@ -62,6 +62,7 @@ export async function POST(req: Request) {
       data: {
         topicId: Number(article.topicId),
         adFee: purchaseAmount,
+        xymAmount: purchaseAmount,
         transactionHash: transactionResponse.transactionInfo.hash,
         type: "purchase",
       },

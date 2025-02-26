@@ -32,8 +32,8 @@ model Article {
   title          String
   content        String
   author         String
-  tipAmount      Int?           @default(0)
-  purchaseAmount Int?           @default(0)
+  xymTipAmount   Float?         @default(0)
+  xymPrice       Float?         @default(0)
   isPurchased    Boolean        @default(false)
   viewCount      Int            @default(0)
   topicId        Int?
@@ -107,6 +107,7 @@ model Transaction {
   id                Int             @id @default(autoincrement())
   topicId           Int
   adFee             Float
+  xymAmount         Float
   transactionHash   String
   type              TransactionType
   isReceived        Boolean         @default(false)

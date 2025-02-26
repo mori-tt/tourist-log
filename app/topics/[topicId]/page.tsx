@@ -3,18 +3,9 @@
 import { useSession, signIn } from "next-auth/react";
 import { useTopics } from "@/context/TopicsContext";
 import { useRouter, useParams } from "next/navigation";
-import { useForm } from "react-hook-form";
-import { useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-
-interface TopicFormData {
-  title: string;
-  content: string;
-  adFee: number;
-  monthlyPVThreshold: number;
-}
 
 export default function TopicPage() {
   const { data: session, status } = useSession();
@@ -23,16 +14,6 @@ export default function TopicPage() {
   const params = useParams();
   const topicId = Number(params.topicId);
   const topic = topics.find((t) => t.id === topicId);
-  const { handleSubmit, setValue } = useForm<TopicFormData>();
-
-  useEffect(() => {
-    if (topic) {
-      setValue("title", topic.title);
-      setValue("content", topic.content);
-      setValue("adFee", topic.adFee);
-      setValue("monthlyPVThreshold", topic.monthlyPVThreshold);
-    }
-  }, [topic, setValue]);
 
   if (status === "loading") return <p>Loading...</p>;
   if (!session) {
@@ -50,21 +31,6 @@ export default function TopicPage() {
   const isDeletable =
     session.user.isAdmin || session.user.id === topic?.advertiserId;
 
-  const onSubmit = async (data: TopicFormData) => {
-    const res = await fetch(`/api/topics/${topicId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    if (res.ok) {
-      const updatedTopic = await res.json();
-      updateTopic(updatedTopic);
-      router.push("/dashboard"); // 更新後は共通ダッシュボードへ戻る
-    } else {
-      console.error("トピック更新に失敗しました");
-    }
-  };
-
   const handleDelete = async () => {
     const res = await fetch(`/api/topics/${topicId}`, {
       method: "DELETE",
@@ -78,56 +44,52 @@ export default function TopicPage() {
 
   return (
     <Card className="m-8 p-8">
-      <CardHeader>
-        <CardTitle></CardTitle>
-      </CardHeader>
-      <CardContent>
-        {topic ? (
-          <form onSubmit={handleSubmit(onSubmit)}>
-            <div className="mb-4">
-              <label className="block mb-1">タイトル:</label>
-
-              <p>{topic.title}</p>
-            </div>
-            <div className="mb-4">
-              <label className="block mb-1">内容:</label>
-
-              <p>{topic.content}</p>
-            </div>
-            <div className="mb-4">
-              <label className="block mb-1">広告料:</label>
-
-              <p>{topic.adFee} 円</p>
-            </div>
-            <div className="mb-4">
-              <label className="block mb-1">月間PV支払い基準:</label>
-
-              <p>{topic.monthlyPVThreshold}</p>
-            </div>
-            <div className="mb-4 flex gap-4">
-              {isEditable && (
-                <Link href={`/topics/${topicId}/edit`}>
-                  <Button type="submit">編集</Button>
+      {topic ? (
+        <>
+          <CardHeader>
+            <CardTitle>{topic.title}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <label className="block mb-1 font-medium">内容:</label>
+                <p>{topic.content}</p>
+              </div>
+              <div>
+                <label className="block mb-1 font-medium">広告料:</label>
+                <p>{topic.adFee} XYM</p>
+              </div>
+              <div>
+                <label className="block mb-1 font-medium">
+                  月間PV支払い基準:
+                </label>
+                <p>{topic.monthlyPVThreshold}</p>
+              </div>
+              <div className="flex gap-4">
+                {isEditable && (
+                  <Link href={`/topics/${topicId}/edit`}>
+                    <Button>編集</Button>
+                  </Link>
+                )}
+                {isDeletable && (
+                  <Button
+                    type="button"
+                    onClick={handleDelete}
+                    variant="destructive"
+                  >
+                    削除
+                  </Button>
+                )}
+                <Link href="/">
+                  <Button variant="outline">戻る</Button>
                 </Link>
-              )}
-              {isDeletable && (
-                <Button
-                  type="button"
-                  onClick={handleDelete}
-                  variant="destructive"
-                >
-                  削除
-                </Button>
-              )}
+              </div>
             </div>
-            <Link href="/">
-              <Button variant="outline">戻る</Button>
-            </Link>
-          </form>
-        ) : (
-          <p>トピックが見つかりません。</p>
-        )}
-      </CardContent>
+          </CardContent>
+        </>
+      ) : (
+        <p>トピックが見つかりません。</p>
+      )}
     </Card>
   );
 }

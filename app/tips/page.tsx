@@ -63,7 +63,7 @@ export default function TipManagementPage() {
               <tr key={tx.id}>
                 <td>{tx.type === "tip" ? "投げ銭" : "広告料"}</td>
                 <td>{tx.articleId || "-"}</td>
-                <td>{tx.tipAmount || tx.adFee} 円</td>
+                <td>{tx.tipAmount || tx.adFee} XYM</td>
                 <td>{tx.transactionHash}</td>
               </tr>
             ))}

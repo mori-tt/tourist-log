@@ -75,7 +75,7 @@ export default function TopicPostPage() {
             />
           </div>
           <div>
-            <label className="block mb-1">広告料 (円)</label>
+            <label className="block mb-1">広告料 (XYM)</label>
             <Input
               type="number"
               placeholder="広告料"
