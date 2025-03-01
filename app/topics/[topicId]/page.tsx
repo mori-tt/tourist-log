@@ -9,7 +9,7 @@ import Link from "next/link";
 
 export default function TopicPage() {
   const { data: session, status } = useSession();
-  const { topics, updateTopic } = useTopics();
+  const { topics } = useTopics();
   const router = useRouter();
   const params = useParams();
   const topicId = Number(params.topicId);

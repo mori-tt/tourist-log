@@ -15,6 +15,7 @@ export interface Article {
   tipAmount: number;
   xymPrice: number;
   isPurchased: boolean;
+  purchasedBy?: string;
   topicId: number;
   updatedAt: string;
   images: { url: string }[];
@@ -93,4 +94,26 @@ export function useArticles(): ArticlesContextType {
     throw new Error("useArticles must be used within an ArticlesProvider");
   }
   return context;
+}
+
+export interface PageViewData {
+  id: number;
+  topicId: number;
+  year: number;
+  month: number;
+  pageViews: number;
+  isConfirmed: boolean;
+  isPaid: boolean;
+  confirmedAt: string;
+  paidAt: string | null;
+  topic: {
+    title: string;
+    adFee: number;
+    monthlyPVThreshold: number;
+    advertiser: {
+      id: number;
+      name: string;
+      email: string;
+    };
+  };
 }

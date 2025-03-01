@@ -5,7 +5,12 @@ import { sendRewardTransaction } from "@/utils/symbol";
 export async function POST(req: Request) {
   try {
     const data = await req.json();
-    const { advertiserWalletPrivateKey, articleId, purchaseAmount } = data;
+    const {
+      advertiserWalletPrivateKey,
+      articleId,
+      purchaseAmount,
+      advertiserId,
+    } = data;
 
     // 記事と著者情報を取得
     const article = await prisma.article.findUnique({
@@ -51,10 +56,13 @@ export async function POST(req: Request) {
       purchaseAmount
     );
 
-    // 記事購入状態の更新
+    // 記事購入状態の更新（購入者IDを記録）
     const updatedArticle = await prisma.article.update({
       where: { id: Number(articleId) },
-      data: { isPurchased: true },
+      data: {
+        isPurchased: true,
+        purchasedBy: advertiserId,
+      },
     });
 
     // DBに取引情報を記録（購入時は tipAmount フィールドを購入額として利用）

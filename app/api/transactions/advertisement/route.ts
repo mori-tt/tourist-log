@@ -20,6 +20,7 @@ export async function POST(req: Request) {
       data: {
         topicId: Number(topicId),
         adFee: 0, // tipの場合は広告料は0
+        xymAmount: 0, // added to fulfill required field of TransactionCreateInput
         transactionHash: transactionResponse.transactionInfo.hash,
         type: "advertisement",
       },

@@ -32,8 +32,20 @@ export default function DashboardPage() {
           <section className="mb-8">
             <h2 className="text-2xl font-bold mb-4">新規トピック作成</h2>
             <Link href="/topics/new">
-              <Button>新規トピック作成</Button>
+              <Button className="mr-4">新規トピック作成</Button>
             </Link>
+          </section>
+
+          <section className="mb-8">
+            <h2 className="text-2xl font-bold mb-4">広告主機能</h2>
+            <div className="flex space-x-4">
+              <Link href="/advertiser/pageviews">
+                <Button variant="outline">PV数入力</Button>
+              </Link>
+              <Link href="/advertiser/payments">
+                <Button variant="outline">広告費支払い</Button>
+              </Link>
+            </div>
           </section>
         </div>
       )}
@@ -80,11 +92,29 @@ export default function DashboardPage() {
 
                     {articles
                       .filter((article) => article.topicId === topic.id)
+                      .filter((article) => {
+                        // 購入済み記事のアクセス制御
+                        if (!article.isPurchased) {
+                          // 未購入記事は誰でも閲覧可能
+                          return true;
+                        }
+                        // 購入済み記事は投稿者、購入者、管理者のみ閲覧可能
+                        return (
+                          isAdmin ||
+                          article.author === session.user.email ||
+                          article.purchasedBy === session.user.id
+                        );
+                      })
                       .map((article) => (
                         <Card key={article.id} className="mb-2">
                           <CardHeader>
                             <CardTitle className="text-lg font-bold">
                               {article.title}
+                              {article.isPurchased && (
+                                <span className="ml-2 text-sm text-green-600">
+                                  (購入済み)
+                                </span>
+                              )}
                             </CardTitle>
                           </CardHeader>
                           <CardContent>

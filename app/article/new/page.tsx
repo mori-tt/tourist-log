@@ -137,12 +137,12 @@ export default function NewArticlePage() {
             <Input
               type="number"
               placeholder="買取金額"
-              {...register("purchaseAmount", {
+              {...register("xymPrice", {
                 required: true,
                 valueAsNumber: true,
               })}
             />
-            {errors.purchaseAmount && <span>買取金額は必須です</span>}
+            {errors.xymPrice && <span>買取金額は必須です</span>}
           </div>
           <div>
             <ReactMde

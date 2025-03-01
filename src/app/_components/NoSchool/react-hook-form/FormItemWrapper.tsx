@@ -1,23 +1,24 @@
-import React from "react";
 import { useFormContext, Controller } from "react-hook-form";
+import React from "react";
 
-// Define the props for the component
 interface FormItemWrapperProps {
   name: string;
+  control: any;
+  children: React.ReactNode;
   label?: string;
-  rules?: any;
-  children: (params: { field: any }) => React.ReactNode;
+  labelClassName?: string;
+  required?: boolean;
 }
 
-export default function FormItemWrapper({
+export function FormItemWrapper({
   name,
-  label,
-  rules,
+  control,
   children,
+  label,
+  labelClassName = "",
+  required = false,
 }: FormItemWrapperProps) {
-  // Use the form context to get control and errors
   const {
-    control,
     formState: { errors },
   } = useFormContext();
   const error = errors[name];
@@ -25,25 +26,15 @@ export default function FormItemWrapper({
   return (
     <div className="mb-4">
       {label && (
-        <label
-          htmlFor={name}
-          className="mb-1 block text-sm font-medium text-gray-700"
-        >
-          {label}
+        <label className={`block mb-2 text-sm font-medium ${labelClassName}`}>
+          {label} {required && <span className="text-red-500">*</span>}
         </label>
       )}
-      <Controller
-        name={name}
-        control={control}
-        rules={rules}
-        render={({ field }) => <div>{children({ field })}</div>}
-      />
+      {children}
       {error && (
-        <span className="text-red-600 text-xs mt-1 block">
-          {typeof error.message === "string"
-            ? error.message
-            : "入力エラーがあります"}
-        </span>
+        <p className="mt-1 text-sm text-red-600">
+          {error.message?.toString() || "入力が必要です"}
+        </p>
       )}
     </div>
   );

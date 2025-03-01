@@ -15,7 +15,7 @@ export default function MarkdownWithZoomableImages({
     <ReactMarkdown
       remarkPlugins={[remarkGfm, remarkImageAttributes]}
       components={{
-        img: ({ node, ...props }) => {
+        img: ({ ...props }) => {
           const { src, alt = "記事の画像" } = props;
 
           if (!src) return null;

@@ -1,88 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["relationJoins"]
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-}
-
-generator client {
-  provider = "prisma-client-js"
 }
 
 model User {
   id            String    @id @default(cuid())
   name          String?
   email         String?   @unique
-  walletAddress String?
   emailVerified DateTime?
   image         String?
   isAdmin       Boolean   @default(false)
   isAdvertiser  Boolean   @default(false)
-  isActive      Boolean   @default(false)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-
-  articles  Article[]
-  topics    Topic[]
-  accounts  Account[]
-  sessions  Session[]
+  isActive      Boolean   @default(false)
+  walletAddress String?
+  accounts      Account[]
+  articles      Article[]
+  sessions      Session[]
+  topics        Topic[]
 }
 
-
 model Article {
-  id             Int            @id @default(autoincrement())
-  title          String
-  content        String
-  author         String
-  xymTipAmount   Float?         @default(0)
-  xymPrice       Float?         @default(0)
-  isPurchased    Boolean        @default(false)
-  viewCount      Int            @default(0)
-  topicId        Int?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  userId         String
-  user           User           @relation(fields: [userId], references: [id])
-  topic          Topic?         @relation(fields: [topicId], references: [id])
-  
-  images         ArticleImage[]
+  id           Int            @id @default(autoincrement())
+  title        String
+  content      String
+  author       String
+  isPurchased  Boolean        @default(false)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  userId       String
+  viewCount    Int            @default(0)
+  topicId      Int?
+  xymPrice     Float?         @default(0)
+  xymTipAmount Float?         @default(0)
+  purchasedBy  String?
+  topic        Topic?         @relation(fields: [topicId], references: [id])
+  user         User           @relation(fields: [userId], references: [id])
+  images       ArticleImage[]
 }
 
 model ArticleImage {
   id        Int      @id @default(autoincrement())
   url       String
-  article   Article  @relation(fields: [articleId], references: [id])
   articleId Int
   createdAt DateTime @default(now())
+  article   Article  @relation(fields: [articleId], references: [id])
 }
 
 model Topic {
-  id                 Int       @id @default(autoincrement())
+  id                 Int               @id @default(autoincrement())
   title              String
   content            String
   adFee              Float
   monthlyPVThreshold Int
   advertiserId       String
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
-
-  advertiser User @relation(fields: [advertiserId], references: [id])
-  // 逆方向のリレーションを追加する場合:
-  articles   Article[]
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  articles           Article[]
+  monthlyPageViews   MonthlyPageView[]
+  advertiser         User              @relation(fields: [advertiserId], references: [id])
 }
 
 model Account {
-  id                  String  @id @default(cuid())
-  userId              String
-  type                String
-  provider            String
-  providerAccountId   String
-  refresh_token       String?
-  access_token        String?
-  expires_at          Int?
-  token_type          String?
-  scope               String?
-  id_token            String?
-  session_state       String?
-  user                User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
@@ -104,17 +102,37 @@ model VerificationToken {
 }
 
 model Transaction {
-  id                Int             @id @default(autoincrement())
-  topicId           Int
-  adFee             Float
-  xymAmount         Float
-  transactionHash   String
-  type              TransactionType
-  isReceived        Boolean         @default(false)
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
+  adFee           Float
+  createdAt       DateTime        @default(now())
+  transactionHash String
+  type            TransactionType
+  updatedAt       DateTime        @updatedAt
+  id              Int             @id @default(autoincrement())
+  topicId         Int
+  isReceived      Boolean         @default(false)
+  xymAmount       Float
 
   @@index([topicId])
+}
+
+model MonthlyPageView {
+  id              Int       @id @default(autoincrement())
+  topicId         Int
+  year            Int
+  month           Int
+  pageViews       Int       @default(0)
+  isConfirmed     Boolean   @default(false)
+  isPaid          Boolean   @default(false)
+  confirmedAt     DateTime?
+  paidAt          DateTime?
+  transactionHash String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  topic           Topic     @relation(fields: [topicId], references: [id])
+
+  @@unique([topicId, year, month])
+  @@index([topicId])
+  @@index([year, month])
 }
 
 enum TransactionType {

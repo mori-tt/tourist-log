@@ -141,7 +141,8 @@ export default function ArticleDetailPage() {
         body: JSON.stringify({
           advertiserWalletPrivateKey: purchaseWalletPrivateKey,
           articleId: article.id,
-          xymPrice: article.xymPrice,
+          purchaseAmount: article.xymPrice,
+          advertiserId: session.user.id, // 購入者IDを送信
         }),
       });
 
@@ -177,8 +178,33 @@ export default function ArticleDetailPage() {
   const isAdvertiser = session.user?.isAdvertiser;
   const isGeneral = !isAdmin && !isAdvertiser;
   const isAuthor = session.user.email === article.author;
+  const isPurchaser = article.purchasedBy === session.user.id;
+
   const canTip = !isAuthor && (isGeneral || isAdvertiser);
   const canPurchase = isAdvertiser && !article.isPurchased;
+
+  // 購入済み記事のアクセス制御
+  const canViewPurchasedArticle = isAdmin || isAuthor || isPurchaser;
+  if (article.isPurchased && !canViewPurchasedArticle) {
+    return (
+      <Card className="m-8 p-8">
+        <CardHeader>
+          <CardTitle className="text-2xl font-bold mb-4">
+            アクセス制限
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p>この記事は購入済みのため、閲覧権限がありません。</p>
+          <p>記事を閲覧できるのは以下のユーザーのみです：</p>
+          <ul className="list-disc ml-5 mt-2">
+            <li>記事を投稿したユーザー</li>
+            <li>記事を購入した広告主</li>
+            <li>管理者</li>
+          </ul>
+        </CardContent>
+      </Card>
+    );
+  }
 
   const topicTitle =
     article.topic?.title ||
