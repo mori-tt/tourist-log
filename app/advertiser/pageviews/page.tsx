@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useSession, signIn } from "next-auth/react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -50,7 +50,7 @@ export default function PageViewsPage() {
   const lastMonthYear = currentMonth === 1 ? currentYear - 1 : currentYear;
 
   // データ取得
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       // トピック一覧を取得
@@ -84,13 +84,13 @@ export default function PageViewsPage() {
       setError("データの取得に失敗しました");
       setLoading(false);
     }
-  };
+  }, [lastMonth, lastMonthYear]);
 
   useEffect(() => {
     if (status === "authenticated") {
       fetchData();
     }
-  }, [status]);
+  }, [status, fetchData]);
 
   if (status === "loading") return <p>Loading...</p>;
   if (!session) {

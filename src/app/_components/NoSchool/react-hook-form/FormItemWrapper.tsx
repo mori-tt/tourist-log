@@ -1,9 +1,8 @@
-import { useFormContext, Controller } from "react-hook-form";
+import { useFormContext } from "react-hook-form";
 import React from "react";
 
 interface FormItemWrapperProps {
   name: string;
-  control: any;
   children: React.ReactNode;
   label?: string;
   labelClassName?: string;
@@ -12,7 +11,6 @@ interface FormItemWrapperProps {
 
 export function FormItemWrapper({
   name,
-  control,
   children,
   label,
   labelClassName = "",
