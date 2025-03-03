@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSession, signIn } from "next-auth/react";
 import {
   Card,
@@ -23,15 +23,8 @@ export default function ProfilePage() {
   const [success, setSuccess] = useState("");
   const [isValidAddress, setIsValidAddress] = useState(true);
 
-  useEffect(() => {
-    if (session?.user?.id) {
-      // ユーザーのウォレットアドレスを取得
-      fetchWalletAddress();
-    }
-  }, [session]);
-
   // ウォレットアドレスを取得する関数
-  const fetchWalletAddress = async () => {
+  const fetchWalletAddress = useCallback(async () => {
     try {
       const res = await fetch(`/api/user/${session?.user?.id}`);
       if (res.ok) {
@@ -43,7 +36,13 @@ export default function ProfilePage() {
     } catch (error) {
       console.error("Error fetching wallet address:", error);
     }
-  };
+  }, [session?.user?.id]);
+
+  useEffect(() => {
+    if (session?.user?.id) {
+      fetchWalletAddress();
+    }
+  }, [session, fetchWalletAddress]);
 
   // ウォレットアドレスを検証する関数
   const validateAddress = (address: string) => {

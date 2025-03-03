@@ -1,12 +1,14 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { checkTransactionStatus } from "@/utils/symbol";
 
+// 完全に新しいアプローチで実装
 export async function GET(
-  request: Request,
-  { params }: { params: { hash: string } }
-) {
+  req: NextRequest,
+  context: { params: Promise<{ hash: string }> }
+): Promise<Response> {
   try {
-    const transactionHash = params.hash;
+    const { params } = await context;
+    const transactionHash = (await params).hash;
     const transaction = await checkTransactionStatus(transactionHash);
 
     if (!transaction) {

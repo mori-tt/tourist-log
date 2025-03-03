@@ -112,8 +112,12 @@ export default function ArticleDetailPage() {
           "トランザクションの確認がタイムアウトしました。Symbol Explorerで確認してください。"
         );
       }
-    } catch (error: any) {
-      setError(error.message || "投げ銭の送信中にエラーが発生しました");
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError("投げ銭の送信中にエラーが発生しました");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -306,7 +310,8 @@ export default function ArticleDetailPage() {
             <DialogHeader>
               <DialogTitle>投げ銭を送る</DialogTitle>
               <DialogDescription>
-                この記事の著者に投げ銭を送ります。金額と秘密鍵を入力してください。
+                {success && <p className="text-green-600">{success}</p>}
+                {error && <p className="text-red-600">{error}</p>}
               </DialogDescription>
             </DialogHeader>
 
@@ -337,7 +342,6 @@ export default function ArticleDetailPage() {
                   placeholder="あなたのSymbolウォレットの秘密鍵"
                 />
               </div>
-              {error && <p className="text-sm text-red-500">{error}</p>}
             </div>
 
             <DialogFooter>
