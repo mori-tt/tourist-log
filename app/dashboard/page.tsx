@@ -7,6 +7,7 @@ import { useArticles } from "@/context/ArticlesContext";
 import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import WalletAddressAlert from "@/components/WalletAddressAlert";
 
 export default function DashboardPage() {
   const { data: session, status } = useSession();
@@ -26,6 +27,22 @@ export default function DashboardPage() {
 
   return (
     <div className="p-8 space-y-8">
+      {/* ウォレットアドレス警告表示 */}
+      <WalletAddressAlert />
+
+      {/* 共通セクション - プロフィール設定 */}
+      <section className="mb-8">
+        <h2 className="text-2xl font-bold mb-4">アカウント設定</h2>
+        <div className="flex space-x-4">
+          <Link href="/profile">
+            <Button variant="outline">プロフィール設定</Button>
+          </Link>
+        </div>
+        <p className="text-sm text-muted-foreground mt-2">
+          Symbolウォレットアドレスを設定して、投げ銭や記事購入、広告費の支払いが可能になります。
+        </p>
+      </section>
+
       {/* 広告主の場合 */}
       {isAdvertiser && (
         <div>

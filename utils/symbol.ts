@@ -10,6 +10,7 @@ import {
   SignedTransaction,
   Mosaic,
   MosaicId,
+  TransactionGroup,
 } from "symbol-sdk";
 
 // 環境変数からノードURLを取得。存在しない場合はエラー
@@ -33,10 +34,10 @@ export async function sendRewardTransaction(
   amount: number
 ): Promise<{ transactionInfo: SignedTransaction; fee: string }> {
   const account = Account.createFromPrivateKey(privateKey, networkType);
-  const epochAdjustment = Number(process.env.EPOCH_ADJUSTMENT) || 1616694977;
+  const epochAdjustment = Number(process.env.EPOCH_ADJUSTMENT);
 
   // SymbolネットワークのモザイクID（XYM）
-  const currencyMosaicId = new MosaicId(process.env.CURRENCY_MOSAIC_ID || "");
+  const currencyMosaicId = new MosaicId(process.env.CURRENCY_MOSAIC_ID!);
 
   // 金額をUInt64に変換（XYM単位の金額をそのまま使用）
   // Symbol ネットワークでは1XYM = 1,000,000マイクロXYM
@@ -54,13 +55,13 @@ export async function sendRewardTransaction(
   );
 
   // 手数料の計算と設定
-  const feeMultiplier = Number(process.env.SYMBOL_FEE_MULTIPLIER) || 100;
+  const feeMultiplier = Number(process.env.SYMBOL_FEE_MULTIPLIER);
   const txSize = transferTransaction.size;
   const feeAmount = txSize * feeMultiplier;
   const signReadyTx = transferTransaction.setMaxFee(feeAmount);
   const fee = UInt64.fromUint(feeAmount);
 
-  const networkGenerationHash = process.env.NETWORK_GENERATION_HASH || "";
+  const networkGenerationHash = process.env.NETWORK_GENERATION_HASH!;
   const signedTransaction = account.sign(signReadyTx, networkGenerationHash);
 
   const transactionHttp = repositoryFactory.createTransactionRepository();
@@ -85,3 +86,28 @@ export function isValidSymbolAddress(address: string): boolean {
     return false;
   }
 }
+
+export async function checkTransactionStatus(transactionHash: string) {
+  const transactionHttp = repositoryFactory.createTransactionRepository();
+  try {
+    const transaction = await transactionHttp
+      .getTransaction(transactionHash, TransactionGroup.Confirmed)
+      .toPromise();
+    return transaction;
+  } catch (error) {
+    console.error("トランザクション確認エラー:", error);
+    return null;
+  }
+}
+
+// フロントエンド側でトランザクションの状態を確認する関数
+// async function checkTransactionStatus(transactionHash: string) {
+//   try {
+//     const response = await fetch(`/api/transactions/status/${transactionHash}`);
+//     const data = await response.json();
+//     return data.status; // "confirmed", "pending", "failed" などの状態を返す
+//   } catch (error) {
+//     console.error("トランザクション状態確認エラー:", error);
+//     return "error";
+//   }
+// }

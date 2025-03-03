@@ -15,10 +15,7 @@ export async function GET() {
       include: {
         topic: true,
         user: true,
-        images: true, // ここを追加して画像情報を取得する
-      },
-      orderBy: {
-        createdAt: "desc",
+        images: true,
       },
     });
     return NextResponse.json(articles);

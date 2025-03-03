@@ -24,6 +24,10 @@ export interface Article {
     title: string;
   };
   userId: string;
+  user?: {
+    id: string;
+    walletAddress?: string;
+  };
 }
 export interface ArticleFormData {
   title: string;

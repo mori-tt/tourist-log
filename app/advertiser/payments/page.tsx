@@ -22,6 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import WalletAddressAlert from "@/components/WalletAddressAlert";
 
 interface PageViewData {
   id: number;
@@ -174,7 +175,9 @@ export default function PaymentsPage() {
   const isAfterTenthDay = now.getDate() >= 10;
 
   return (
-    <Card className="m-8">
+    <Card className="m-8 p-8">
+      <WalletAddressAlert />
+
       <CardHeader>
         <CardTitle>広告費支払い管理</CardTitle>
       </CardHeader>
