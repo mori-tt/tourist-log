@@ -6,6 +6,7 @@ import { useRouter, useParams } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { useState, useEffect } from "react";
 
 export default function TopicPage() {
   const { data: session, status } = useSession();
@@ -14,6 +15,31 @@ export default function TopicPage() {
   const params = useParams();
   const topicId = Number(params.topicId);
   const topic = topics.find((t) => t.id === topicId);
+  const [advertiserName, setAdvertiserName] = useState<string>("");
+
+  useEffect(() => {
+    const fetchAdvertiserName = async () => {
+      if (!topic || !topic.advertiserId) {
+        setAdvertiserName("不明な広告主");
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/user/${topic.advertiserId}`);
+        if (res.ok) {
+          const userData = await res.json();
+          setAdvertiserName(userData.name || topic.advertiserId);
+        } else {
+          setAdvertiserName(topic.advertiserId);
+        }
+      } catch (error) {
+        console.error("広告主名の取得に失敗しました:", error);
+        setAdvertiserName(topic.advertiserId);
+      }
+    };
+
+    fetchAdvertiserName();
+  }, [topic]);
 
   if (status === "loading") return <p>Loading...</p>;
   if (!session) {
@@ -54,6 +80,10 @@ export default function TopicPage() {
               <div>
                 <label className="block mb-1 font-medium">内容:</label>
                 <p>{topic.content}</p>
+              </div>
+              <div>
+                <label className="block mb-1 font-medium">広告主:</label>
+                <p>{advertiserName}</p>
               </div>
               <div>
                 <label className="block mb-1 font-medium">広告料:</label>

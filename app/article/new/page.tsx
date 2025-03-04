@@ -93,6 +93,9 @@ export default function NewArticlePage() {
           topicId: Number(data.topicId),
           author: session?.user?.email || "",
           userId: session?.user?.id || "",
+          authorName: session?.user?.email
+            ? session.user.email.split("@")[0]
+            : "",
           images: uploadedImages.map((url) => ({ url })),
         }),
       });

@@ -71,11 +71,13 @@ export default function UsersPage() {
                     ID
                   </th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                    Email
+                    ユーザー名
                   </th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                    Name
-                  </th>
+                  {session?.user?.isAdmin && (
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                      メールアドレス
+                    </th>
+                  )}
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
                     Admin
                   </th>
@@ -94,8 +96,10 @@ export default function UsersPage() {
                 {users.map((u) => (
                   <tr key={u.id}>
                     <td className="px-4 py-2">{u.id}</td>
-                    <td className="px-4 py-2">{u.email}</td>
                     <td className="px-4 py-2">{u.name}</td>
+                    {session?.user?.isAdmin && (
+                      <td className="px-4 py-2">{u.email}</td>
+                    )}
                     <td className="px-4 py-2">{u.isAdmin ? "Yes" : "No"}</td>
                     <td className="px-4 py-2">{u.isActive ? "Yes" : "No"}</td>
                     <td className="px-4 py-2">
@@ -135,11 +139,13 @@ export default function UsersPage() {
                   <span className="font-bold">ID:</span> {u.id}
                 </p>
                 <p>
-                  <span className="font-bold">Email:</span> {u.email}
+                  <span className="font-bold">ユーザー名:</span> {u.name}
                 </p>
-                <p>
-                  <span className="font-bold">Name:</span> {u.name}
-                </p>
+                {session?.user?.isAdmin && (
+                  <p>
+                    <span className="font-bold">メールアドレス:</span> {u.email}
+                  </p>
+                )}
                 <p>
                   <span className="font-bold">Admin:</span>{" "}
                   {u.isAdmin ? "Yes" : "No"}

@@ -17,7 +17,7 @@ export default function MyArticlesPage() {
 
   // 現在のユーザーが投稿した記事のみを抽出
   const myArticles = articles.filter(
-    (article) => article.author === session.user.email
+    (article) => article.userId === session.user.id
   );
 
   return (

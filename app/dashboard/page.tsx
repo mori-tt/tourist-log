@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useSession, signIn } from "next-auth/react";
 import { useTopics } from "@/context/TopicsContext";
 import { useArticles } from "@/context/ArticlesContext";
@@ -13,6 +13,50 @@ export default function DashboardPage() {
   const { data: session, status } = useSession();
   const { topics } = useTopics();
   const { articles } = useArticles();
+  const [authorNames, setAuthorNames] = useState<{ [key: string]: string }>({});
+  const [advertiserNames, setAdvertiserNames] = useState<{
+    [key: string]: string;
+  }>({});
+
+  // ユーザー名を非同期に取得する関数
+  const fetchUserName = async (userId: string) => {
+    try {
+      const res = await fetch(`/api/user/${userId}`);
+      if (res.ok) {
+        const userData = await res.json();
+        return userData.name || "名前未設定";
+      }
+    } catch (error) {
+      console.error("ユーザー名の取得に失敗しました:", error);
+    }
+    return "不明なユーザー";
+  };
+
+  // 記事の著者名とトピックの広告主名を取得
+  useEffect(() => {
+    const getAuthorNames = async () => {
+      const nameMap: { [key: string]: string } = {};
+      for (const article of articles) {
+        if (article.userId && !nameMap[article.userId]) {
+          nameMap[article.userId] = await fetchUserName(article.userId);
+        }
+      }
+      setAuthorNames(nameMap);
+    };
+
+    const getAdvertiserNames = async () => {
+      const nameMap: { [key: string]: string } = {};
+      for (const topic of topics) {
+        if (topic.advertiserId && !nameMap[topic.advertiserId]) {
+          nameMap[topic.advertiserId] = await fetchUserName(topic.advertiserId);
+        }
+      }
+      setAdvertiserNames(nameMap);
+    };
+
+    getAuthorNames();
+    getAdvertiserNames();
+  }, [articles, topics]);
 
   if (status === "loading") return <p>Loading...</p>;
   if (!session) {
@@ -94,6 +138,11 @@ export default function DashboardPage() {
                   <CardContent>
                     <p className="text-sm text-gray-500">{topic.content}</p>
                     <p className="text-sm text-gray-500">
+                      広告主:{" "}
+                      {advertiserNames[topic.advertiserId] ||
+                        topic.advertiserId}
+                    </p>
+                    <p className="text-sm text-gray-500">
                       広告料: {topic.adFee}XYM
                     </p>
                     <p className="text-sm text-gray-500 mb-4">
@@ -118,7 +167,7 @@ export default function DashboardPage() {
                         // 購入済み記事は投稿者、購入者、管理者のみ閲覧可能
                         return (
                           isAdmin ||
-                          article.author === session.user.email ||
+                          article.userId === session.user.id ||
                           article.purchasedBy === session.user.id
                         );
                       })
@@ -141,7 +190,11 @@ export default function DashboardPage() {
                                 更新日時: {article.updatedAt.split("T")[0]}
                               </p>
                               <p className="text-sm text-gray-500">
-                                作者: {article.author}
+                                著者:{" "}
+                                {authorNames[article.userId] ||
+                                  (article.author
+                                    ? article.author.split("@")[0]
+                                    : "不明なユーザー")}
                               </p>
                               <p className="text-sm text-gray-500 mb-4">
                                 買取金額: {article.xymPrice}XYM

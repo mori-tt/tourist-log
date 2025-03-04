@@ -45,6 +45,8 @@ export default function ArticleDetailPage() {
 
   const article = articles.find((a) => a.id === articleId);
 
+  const [authorName, setAuthorName] = useState<string>("");
+
   useEffect(() => {
     if (article) {
       setValue("title", article.title);
@@ -53,6 +55,38 @@ export default function ArticleDetailPage() {
       setValue("xymPrice", article.xymPrice);
     }
   }, [article, setValue]);
+
+  useEffect(() => {
+    const fetchAuthorName = async () => {
+      if (!article || !article.userId) {
+        setAuthorName(
+          article?.author ? article.author.split("@")[0] : "不明なユーザー"
+        );
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/user/${article.userId}`);
+        if (res.ok) {
+          const userData = await res.json();
+          setAuthorName(
+            userData.name || article.author?.split("@")[0] || "不明なユーザー"
+          );
+        } else {
+          setAuthorName(
+            article.author ? article.author.split("@")[0] : "不明なユーザー"
+          );
+        }
+      } catch (error) {
+        console.error("著者名の取得に失敗しました:", error);
+        setAuthorName(
+          article.author ? article.author.split("@")[0] : "不明なユーザー"
+        );
+      }
+    };
+
+    fetchAuthorName();
+  }, [article]);
 
   const handleTip = async () => {
     setTipDialogOpen(true);
@@ -195,8 +229,13 @@ export default function ArticleDetailPage() {
   const isAdmin = session.user?.isAdmin;
   const isAdvertiser = session.user?.isAdvertiser;
   const isGeneral = !isAdmin && !isAdvertiser;
-  const isAuthor = session.user.email === article.author;
+  const isAuthor = session.user.id === article.userId;
   const isPurchaser = article.purchasedBy === session.user.id;
+
+  const topicTitle =
+    article.topic?.title ||
+    topics.find((t) => t.id === article.topicId)?.title ||
+    "トピックなし";
 
   const canTip =
     !isAuthor && (isGeneral || isAdvertiser) && !article.isPurchased;
@@ -225,24 +264,19 @@ export default function ArticleDetailPage() {
     );
   }
 
-  const topicTitle =
-    article.topic?.title ||
-    topics.find((t) => t.id === article.topicId)?.title ||
-    "トピックなし";
-
   return (
     <>
-      <div className="mx-auto max-w-4xl p-8">
+      <div className="mx-auto max-w-4xl px-4 sm:px-6 md:px-8">
         <WalletAddressAlert />
 
-        <Card className="m-8 p-8">
+        <Card className="mx-2 sm:m-4 md:m-8 p-4 sm:p-6 md:p-8">
           <CardHeader>
             <CardTitle className="text-2xl font-bold mb-4">
               {article.title}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p>著者: {article.author}</p>
+            <p>著者: {authorName}</p>
             <p>トピック: {topicTitle}</p>
             <div className="my-4">
               <MarkdownWithZoomableImages content={article.content} />
@@ -265,7 +299,7 @@ export default function ArticleDetailPage() {
               <p className="text-sm text-gray-500">
                 更新日時: {article.updatedAt.split("T")[0]}
               </p>
-              <p className="text-sm text-gray-500">作者: {article.author}</p>
+              <p className="text-sm text-gray-500">著者: {authorName}</p>
               <p className="text-sm text-gray-500">
                 買取金額: {article.xymPrice}XYM
               </p>

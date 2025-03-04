@@ -36,8 +36,13 @@ export default function WalletAddressAlert() {
     }
   }, [session]);
 
-  // ウォレットアドレスが設定されている場合、または読み込み中の場合は何も表示しない
-  if (hasWalletAddress || hasWalletAddress === null || isLoading) {
+  // 管理者の場合、またはウォレットアドレスが設定されている場合、または読み込み中の場合は何も表示しない
+  if (
+    session?.user?.isAdmin ||
+    hasWalletAddress ||
+    hasWalletAddress === null ||
+    isLoading
+  ) {
     return null;
   }
 
