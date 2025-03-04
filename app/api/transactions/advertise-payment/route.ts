@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/authOptions";
 import { sendRewardTransaction } from "@/utils/symbol";
-import { PageViewData } from "@/context/ArticlesContext";
+import { PageViewData } from "@/types/pageView";
 
 // 広告費支払い処理のPOSTエンドポイント
 export async function POST(req: Request) {

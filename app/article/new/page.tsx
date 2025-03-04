@@ -10,9 +10,10 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import ReactMde from "react-mde";
 import "react-mde/lib/styles/css/react-mde-all.css";
 import Showdown from "showdown";
-import { useArticles, ArticleFormData } from "@/context/ArticlesContext";
+import { useArticles } from "@/context/ArticlesContext";
 import { useTopics } from "@/context/TopicsContext";
 import SafeImage from "@/components/SafeImage";
+import { ArticleFormData } from "@/types/article";
 
 export default function NewArticlePage() {
   const { data: session, status } = useSession();

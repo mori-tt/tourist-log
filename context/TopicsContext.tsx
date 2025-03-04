@@ -5,15 +5,7 @@ import {
   useEffect,
   ReactNode,
 } from "react";
-
-export interface Topic {
-  id: number;
-  title: string;
-  content: string;
-  adFee: number;
-  monthlyPVThreshold: number;
-  advertiserId: string;
-}
+import { Topic } from "../types/topic";
 
 export interface TopicsContextType {
   topics: Topic[];

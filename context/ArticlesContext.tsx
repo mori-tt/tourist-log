@@ -6,35 +6,7 @@ import {
   useCallback,
   useEffect,
 } from "react";
-
-export interface Article {
-  id: number;
-  title: string;
-  author: string;
-  content: string;
-  tipAmount: number;
-  xymPrice: number;
-  isPurchased: boolean;
-  purchasedBy?: string;
-  topicId: number;
-  updatedAt: string;
-  images: { url: string }[];
-  topic?: {
-    id: number;
-    title: string;
-  };
-  userId: string;
-  user?: {
-    id: string;
-    walletAddress?: string;
-  };
-}
-export interface ArticleFormData {
-  title: string;
-  content: string;
-  topicId: number;
-  xymPrice: number;
-}
+import { Article } from "../types/article";
 
 export interface ArticlesContextType {
   articles: Article[];
@@ -98,26 +70,4 @@ export function useArticles(): ArticlesContextType {
     throw new Error("useArticles must be used within an ArticlesProvider");
   }
   return context;
-}
-
-export interface PageViewData {
-  id: number;
-  topicId: number;
-  year: number;
-  month: number;
-  pageViews: number;
-  isConfirmed: boolean;
-  isPaid: boolean;
-  confirmedAt: string;
-  paidAt: string | null;
-  topic: {
-    title: string;
-    adFee: number;
-    monthlyPVThreshold: number;
-    advertiser: {
-      id: number;
-      name: string;
-      email: string;
-    };
-  };
 }

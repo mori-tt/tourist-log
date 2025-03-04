@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Topic } from "@/context/TopicsContext";
+import { Topic } from "@/types/topic";
 
 interface PageViewData {
   id: number;

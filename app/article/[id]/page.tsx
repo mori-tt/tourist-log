@@ -9,7 +9,7 @@ import Link from "next/link";
 import { useTopics } from "@/context/TopicsContext";
 import { useForm } from "react-hook-form";
 import MarkdownWithZoomableImages from "@/components/MarkdownWithZoomableImages";
-import { ArticleFormData } from "@/context/ArticlesContext";
+import { ArticleFormData } from "@/types/article";
 import SafeImage from "@/components/SafeImage";
 import { Input } from "@/components/ui/input";
 import {

@@ -3,7 +3,8 @@
 import React, { useState, useRef } from "react";
 import { useSession, signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useArticles, ArticleFormData } from "@/context/ArticlesContext";
+import { useArticles } from "@/context/ArticlesContext";
+import { ArticleFormData } from "@/types/article";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";

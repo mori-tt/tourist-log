@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkTransactionStatus } from "@/utils/symbol";
 
-// 完全に新しいアプローチで実装
 export async function GET(
   req: NextRequest,
   context: { params: Promise<{ hash: string }> }
