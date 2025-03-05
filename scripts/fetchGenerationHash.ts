@@ -2,7 +2,7 @@ import path from "path";
 import dotenv from "dotenv";
 import { RepositoryFactoryHttp } from "symbol-sdk";
 
-dotenv.config({ path: path.resolve(__dirname, "../.env.local") });
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 // 必要なプロパティだけを持つ型を定義
 interface MyNetworkConfiguration {
