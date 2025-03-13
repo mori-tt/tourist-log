@@ -186,7 +186,7 @@ export default function NewArticlePage() {
             />
           </div>
           {uploadedImages.length > 0 && (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="max-h-96 overflow-y-auto grid grid-cols-2 gap-4">
               {uploadedImages.map((url, index) => (
                 <div key={index} className="relative h-32">
                   <SafeImage

@@ -8,6 +8,7 @@ import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import WalletAddressAlert from "@/components/WalletAddressAlert";
+import ReactMarkdown from "react-markdown";
 
 export default function DashboardPage() {
   const { data: session, status } = useSession();
@@ -185,7 +186,9 @@ export default function DashboardPage() {
                           </CardHeader>
                           <CardContent>
                             <div>
-                              <p>{article.content.slice(0, 100)}...</p>
+                              <ReactMarkdown>
+                                {article.content.slice(0, 100) + "..."}
+                              </ReactMarkdown>
                               <p className="text-sm text-gray-500 mt-4">
                                 更新日時: {article.updatedAt.split("T")[0]}
                               </p>
