@@ -32,7 +32,7 @@ export default function ArticleDetailPage() {
   const { setValue } = useForm<ArticleFormData>();
 
   const [tipDialogOpen, setTipDialogOpen] = useState(false);
-  const [tipAmount, setTipAmount] = useState(1000);
+  const [tipAmount, setTipAmount] = useState(10);
   const [walletPrivateKey, setWalletPrivateKey] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
