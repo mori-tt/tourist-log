@@ -131,89 +131,96 @@ export default function DashboardPage() {
             {topics.length === 0 ? (
               <p>トピックはありません。</p>
             ) : (
-              topics.map((topic) => (
-                <Card key={topic.id} className="mb-4">
-                  <CardHeader>
-                    <CardTitle>{topic.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-gray-500">{topic.content}</p>
-                    <p className="text-sm text-gray-500">
-                      広告主:{" "}
-                      {advertiserNames[topic.advertiserId] ||
-                        topic.advertiserId}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      広告料: {topic.adFee}XYM
-                    </p>
-                    <p className="text-sm text-gray-500 mb-4">
-                      月間PV支払い基準: {topic.monthlyPVThreshold}
-                    </p>
-                    <div className="flex justify-end mb-4">
-                      <Link href={`/topics/${topic.id}`}>
-                        <Button variant="outline" size="sm">
-                          詳細
-                        </Button>
-                      </Link>
-                    </div>
+              topics
+                .sort((a, b) => b.id - a.id)
+                .map((topic) => (
+                  <Card key={topic.id} className="mb-4">
+                    <CardHeader>
+                      <CardTitle>{topic.title}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-gray-500">{topic.content}</p>
+                      <p className="text-sm text-gray-500">
+                        広告主:{" "}
+                        {advertiserNames[topic.advertiserId] ||
+                          topic.advertiserId}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        広告料: {topic.adFee}XYM
+                      </p>
+                      <p className="text-sm text-gray-500 mb-4">
+                        月間PV支払い基準: {topic.monthlyPVThreshold}
+                      </p>
+                      <div className="flex justify-end mb-4">
+                        <Link href={`/topics/${topic.id}`}>
+                          <Button variant="outline" size="sm">
+                            詳細
+                          </Button>
+                        </Link>
+                      </div>
 
-                    {articles
-                      .filter((article) => article.topicId === topic.id)
-                      .filter((article) => {
-                        // 購入済み記事のアクセス制御
-                        if (!article.isPurchased) {
-                          // 未購入記事は誰でも閲覧可能
-                          return true;
-                        }
-                        // 購入済み記事は投稿者、購入者、管理者のみ閲覧可能
-                        return (
-                          isAdmin ||
-                          article.userId === session.user.id ||
-                          article.purchasedBy === session.user.id
-                        );
-                      })
-                      .map((article) => (
-                        <Card key={article.id} className="mb-2">
-                          <CardHeader>
-                            <CardTitle className="text-lg font-bold">
-                              {article.title}
-                              {article.isPurchased && (
-                                <span className="ml-2 text-sm text-green-600">
-                                  (購入済み)
-                                </span>
-                              )}
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div>
-                              <ReactMarkdown>
-                                {article.content.slice(0, 100) + "..."}
-                              </ReactMarkdown>
-                              <p className="text-sm text-gray-500 mt-4">
-                                更新日時: {article.updatedAt.split("T")[0]}
-                              </p>
-                              <p className="text-sm text-gray-500">
-                                著者:{" "}
-                                {authorNames[article.userId] ||
-                                  (article.author
-                                    ? article.author.split("@")[0]
-                                    : "不明なユーザー")}
-                              </p>
-                              <p className="text-sm text-gray-500 mb-4">
-                                買取金額: {article.xymPrice}XYM
-                              </p>
-                            </div>
-                            <Link href={`/article/${article.id}`}>
-                              <Button variant="outline" size="sm">
-                                詳細
-                              </Button>
-                            </Link>
-                          </CardContent>
-                        </Card>
-                      ))}
-                  </CardContent>
-                </Card>
-              ))
+                      {articles
+                        .filter((article) => article.topicId === topic.id)
+                        .filter((article) => {
+                          // 購入済み記事のアクセス制御
+                          if (!article.isPurchased) {
+                            // 未購入記事は誰でも閲覧可能
+                            return true;
+                          }
+                          // 購入済み記事は投稿者、購入者、管理者のみ閲覧可能
+                          return (
+                            isAdmin ||
+                            article.userId === session.user.id ||
+                            article.purchasedBy === session.user.id
+                          );
+                        })
+                        .sort(
+                          (a, b) =>
+                            new Date(b.updatedAt).getTime() -
+                            new Date(a.updatedAt).getTime()
+                        )
+                        .map((article) => (
+                          <Card key={article.id} className="mb-2">
+                            <CardHeader>
+                              <CardTitle className="text-lg font-bold">
+                                {article.title}
+                                {article.isPurchased && (
+                                  <span className="ml-2 text-sm text-green-600">
+                                    (購入済み)
+                                  </span>
+                                )}
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div>
+                                <ReactMarkdown>
+                                  {article.content.slice(0, 100) + "..."}
+                                </ReactMarkdown>
+                                <p className="text-sm text-gray-500 mt-4">
+                                  更新日時: {article.updatedAt.split("T")[0]}
+                                </p>
+                                <p className="text-sm text-gray-500">
+                                  著者:{" "}
+                                  {authorNames[article.userId] ||
+                                    (article.author
+                                      ? article.author.split("@")[0]
+                                      : "不明なユーザー")}
+                                </p>
+                                <p className="text-sm text-gray-500 mb-4">
+                                  買取金額: {article.xymPrice}XYM
+                                </p>
+                              </div>
+                              <Link href={`/article/${article.id}`}>
+                                <Button variant="outline" size="sm">
+                                  詳細
+                                </Button>
+                              </Link>
+                            </CardContent>
+                          </Card>
+                        ))}
+                    </CardContent>
+                  </Card>
+                ))
             )}
           </section>
         </div>
