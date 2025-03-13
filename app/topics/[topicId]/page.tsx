@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession, signIn } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { useTopics } from "@/context/TopicsContext";
 import { useRouter, useParams } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -43,8 +43,44 @@ export default function TopicPage() {
 
   if (status === "loading") return <p>Loading...</p>;
   if (!session) {
-    signIn();
-    return null;
+    // ログインしていなくても閲覧可能に変更
+    const topic = topics.find((t) => t.id === topicId);
+    if (!topic) return <p>トピックが見つかりません。</p>;
+
+    return (
+      <Card className="m-8 p-8">
+        <CardHeader>
+          <CardTitle>{topic.title}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div>
+              <label className="block mb-1 font-medium">内容:</label>
+              <p>{topic.content}</p>
+            </div>
+            <div>
+              <label className="block mb-1 font-medium">広告主:</label>
+              <p>{advertiserName}</p>
+            </div>
+            <div>
+              <label className="block mb-1 font-medium">広告料:</label>
+              <p>{topic.adFee} XYM</p>
+            </div>
+            <div>
+              <label className="block mb-1 font-medium">
+                月間PV支払い基準:
+              </label>
+              <p>{topic.monthlyPVThreshold}</p>
+            </div>
+            <div className="flex gap-4">
+              <Link href="/">
+                <Button variant="outline">戻る</Button>
+              </Link>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
   }
 
   // 編集可能か判定：広告主本人のみ編集を許可
@@ -62,7 +98,7 @@ export default function TopicPage() {
       method: "DELETE",
     });
     if (res.ok) {
-      router.push("/dashboard");
+      router.push("/");
     } else {
       console.error("トピック削除に失敗しました");
     }

@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useArticles } from "@/context/ArticlesContext";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useSession, signIn } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useTopics } from "@/context/TopicsContext";
 import { useForm } from "react-hook-form";
@@ -223,29 +223,86 @@ export default function ArticleDetailPage() {
 
   if (status === "loading") return <p>Loading...</p>;
   if (!session) {
-    signIn();
-    return null;
+    if (!article) return <p>記事が見つかりません。</p>;
+
+    const topicTitle =
+      article.topic?.title ||
+      topics.find((t) => t.id === article.topicId)?.title ||
+      "トピックなし";
+
+    return (
+      <>
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 md:px-8">
+          <Card className="mx-2 sm:m-4 md:m-8 p-4 sm:p-6 md:p-8">
+            <CardHeader>
+              <CardTitle className="text-2xl font-bold mb-4">
+                {article.title}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p>著者: {authorName}</p>
+              <p>トピック: {topicTitle}</p>
+              <div className="my-4">
+                <MarkdownWithZoomableImages content={article.content} />
+              </div>
+              {article.images && article.images.length > 0 && (
+                <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                  {article.images.map((img: { url: string }, index: number) => (
+                    <div key={index} className="relative">
+                      <SafeImage
+                        src={img.url}
+                        alt={`Article Image ${index}`}
+                        fill
+                        className="object-cover border rounded"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="mt-4">
+                <p className="text-sm text-gray-500">
+                  更新日時: {article.updatedAt.split("T")[0]}
+                </p>
+                <p className="text-sm text-gray-500">著者: {authorName}</p>
+                <p className="text-sm text-gray-500">
+                  買取金額: {article.xymPrice}XYM
+                </p>
+                {article.isPurchased && (
+                  <p className="text-sm font-semibold text-green-600 mt-1">
+                    ※この記事は購入済みです
+                  </p>
+                )}
+              </div>
+              <div className="mt-4">
+                <Button onClick={() => router.back()} className="mt-4">
+                  戻る
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </>
+    );
   }
-  if (!article) return <p>記事が見つかりません。</p>;
 
   const isAdmin = session.user?.isAdmin;
   const isAdvertiser = session.user?.isAdvertiser;
   const isGeneral = !isAdmin && !isAdvertiser;
-  const isAuthor = session.user.id === article.userId;
-  const isPurchaser = article.purchasedBy === session.user.id;
+  const isAuthor = session.user.id === article?.userId;
+  const isPurchaser = article?.purchasedBy === session.user.id;
 
   const topicTitle =
-    article.topic?.title ||
-    topics.find((t) => t.id === article.topicId)?.title ||
+    article?.topic?.title ||
+    topics.find((t) => t.id === article?.topicId)?.title ||
     "トピックなし";
 
   const canTip =
-    !isAuthor && (isGeneral || isAdvertiser) && !article.isPurchased;
-  const canPurchase = isAdvertiser && !article.isPurchased;
+    !isAuthor && (isGeneral || isAdvertiser) && !article?.isPurchased;
+  const canPurchase = isAdvertiser && !article?.isPurchased;
 
   // 購入済み記事のアクセス制御
   const canViewPurchasedArticle = isAdmin || isAuthor || isPurchaser;
-  if (article.isPurchased && !canViewPurchasedArticle) {
+  if (article?.isPurchased && !canViewPurchasedArticle) {
     return (
       <Card className="m-8 p-8">
         <CardHeader>
@@ -261,6 +318,9 @@ export default function ArticleDetailPage() {
             <li>記事を購入した広告主</li>
             <li>管理者</li>
           </ul>
+          <Button onClick={() => router.back()} className="mt-4">
+            戻る
+          </Button>
         </CardContent>
       </Card>
     );
@@ -274,18 +334,18 @@ export default function ArticleDetailPage() {
         <Card className="mx-2 sm:m-4 md:m-8 p-4 sm:p-6 md:p-8">
           <CardHeader>
             <CardTitle className="text-2xl font-bold mb-4">
-              {article.title}
+              {article?.title}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p>著者: {authorName}</p>
             <p>トピック: {topicTitle}</p>
             <div className="my-4">
-              <MarkdownWithZoomableImages content={article.content} />
+              <MarkdownWithZoomableImages content={article?.content || ""} />
             </div>
-            {article.images && article.images.length > 0 && (
+            {article?.images && article?.images.length > 0 && (
               <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                {article.images.map((img: { url: string }, index: number) => (
+                {article?.images.map((img: { url: string }, index: number) => (
                   <div key={index} className="relative">
                     <SafeImage
                       src={img.url}
@@ -299,13 +359,13 @@ export default function ArticleDetailPage() {
             )}
             <div className="mt-4">
               <p className="text-sm text-gray-500">
-                更新日時: {article.updatedAt.split("T")[0]}
+                更新日時: {article?.updatedAt?.split("T")[0]}
               </p>
               <p className="text-sm text-gray-500">著者: {authorName}</p>
               <p className="text-sm text-gray-500">
-                買取金額: {article.xymPrice}XYM
+                買取金額: {article?.xymPrice}XYM
               </p>
-              {article.isPurchased && (
+              {article?.isPurchased && (
                 <p className="text-sm font-semibold text-green-600 mt-1">
                   ※この記事は購入済みです
                 </p>
@@ -317,14 +377,14 @@ export default function ArticleDetailPage() {
 
               {canPurchase && (
                 <Button onClick={handlePurchase} variant="secondary">
-                  この記事を購入する（{article.xymPrice}XYM）
+                  この記事を購入する（{article?.xymPrice}XYM）
                 </Button>
               )}
             </div>
 
-            {isAuthor && !article.isPurchased && (
+            {isAuthor && !article?.isPurchased && (
               <div className="mt-4 flex gap-4">
-                <Link href={`/article/${article.id}/edit`}>
+                <Link href={`/article/${article?.id}/edit`}>
                   <Button>編集</Button>
                 </Link>
                 <Button variant="destructive" onClick={handleDelete}>
@@ -406,7 +466,7 @@ export default function ArticleDetailPage() {
             <DialogHeader>
               <DialogTitle>記事を購入する</DialogTitle>
               <DialogDescription>
-                この記事を{article.xymPrice}
+                この記事を{article?.xymPrice}
                 XYMで購入します。秘密鍵を入力してください。
               </DialogDescription>
             </DialogHeader>

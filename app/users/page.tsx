@@ -181,7 +181,7 @@ export default function UsersPage() {
         </>
       )}
       <div className="mt-4">
-        <Link href="/dashboard">
+        <Link href="/">
           <Button variant="outline">戻る</Button>
         </Link>
       </div>

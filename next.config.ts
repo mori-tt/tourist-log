@@ -9,6 +9,8 @@ const nextConfig: NextConfig = {
         pathname: "**",
       },
     ],
+    domains: ["i.ibb.co"],
+    minimumCacheTTL: 60,
   },
   /* config options here */
 };

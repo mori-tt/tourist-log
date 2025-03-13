@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { useSession, signIn, signOut } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 
@@ -43,13 +43,14 @@ export default function Header() {
         </>
       ) : (
         <li>
-          <Button
-            variant="link"
-            className="text-gray-600 hover:text-gray-900 p-0 m-0 inline"
-            onClick={() => signIn("google")}
-          >
-            ログイン
-          </Button>
+          <Link href="/login" className="text-gray-600 hover:text-gray-900">
+            <Button
+              variant="link"
+              className="text-gray-600 hover:text-gray-900 p-0 m-0 inline"
+            >
+              サインアップ・ログイン
+            </Button>
+          </Link>
         </li>
       )}
     </>
