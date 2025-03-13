@@ -129,7 +129,9 @@ export default function ArticleDetailPage() {
 
         if (statusData.status === "confirmed") {
           confirmed = true;
-          setSuccess("投げ銭が正常に送信されました！");
+          setSuccess(
+            `投げ銭が正常に送信されました！トランザクションハッシュ: ${transactionHash}`
+          );
           setTipDialogOpen(false);
         } else if (statusData.status === "error") {
           throw new Error("トランザクションの確認中にエラーが発生しました");
@@ -344,8 +346,13 @@ export default function ArticleDetailPage() {
             <DialogHeader>
               <DialogTitle>投げ銭を送る</DialogTitle>
               <DialogDescription>
-                {success && <p className="text-green-600">{success}</p>}
-                {error && <p className="text-red-600">{error}</p>}
+                送金額とご自身のSymbolウォレットの秘密鍵を入力してください。
+                {success && (
+                  <p className="mt-2 text-green-600 break-all">{success}</p>
+                )}
+                {error && (
+                  <p className="mt-2 text-red-600 break-all">{error}</p>
+                )}
               </DialogDescription>
             </DialogHeader>
 
