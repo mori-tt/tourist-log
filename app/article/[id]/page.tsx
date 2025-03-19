@@ -53,6 +53,22 @@ export default function ArticleDetailPage() {
       setValue("content", article.content);
       setValue("topicId", article.topicId);
       setValue("xymPrice", article.xymPrice);
+
+      // 画像URLの検証
+      if (article.images) {
+        const validImages = article.images.filter(
+          (img) =>
+            img.url && typeof img.url === "string" && img.url.trim() !== ""
+        );
+
+        if (validImages.length !== article.images.length) {
+          console.warn(
+            `${
+              article.images.length - validImages.length
+            }個の無効な画像URLがフィルタリングされました`
+          );
+        }
+      }
     }
   }, [article, setValue]);
 
@@ -86,6 +102,15 @@ export default function ArticleDetailPage() {
     };
 
     fetchAuthorName();
+  }, [article]);
+
+  useEffect(() => {
+    if (article?.images && article.images.length > 0) {
+      console.log(
+        "Image URLs:",
+        article.images.map((img) => img.url)
+      );
+    }
   }, [article]);
 
   const handleTip = async () => {
@@ -346,7 +371,10 @@ export default function ArticleDetailPage() {
             {article?.images && article?.images.length > 0 && (
               <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {article?.images.map((img: { url: string }, index: number) => (
-                  <div key={index} className="relative">
+                  <div
+                    key={index}
+                    className="relative aspect-square w-full h-40 md:h-48 overflow-hidden"
+                  >
                     <SafeImage
                       src={img.url}
                       alt={`Article Image ${index}`}
