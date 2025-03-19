@@ -5,14 +5,27 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "**.ibb.co",
-        pathname: "**",
+        hostname: "i.ibb.co",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "ibb.co",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "image.ibb.co",
+        pathname: "/**",
       },
     ],
-    domains: ["i.ibb.co", "image.ibb.co", "ibb.co"],
-    minimumCacheTTL: 3600, // キャッシュ時間を1時間に延長
-    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840], // 様々なデバイスサイズに対応
-    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384], // より詳細な画像サイズオプション
+    // domains設定は非推奨なので削除
+    minimumCacheTTL: 60, // キャッシュ時間を1分に短縮して頻繁に更新
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    formats: ["image/webp"],
+    dangerouslyAllowSVG: true, // SVGを許可
+    unoptimized: true, // Nextによる画像最適化を無効化（imgBBは既に最適化済み）
   },
 };
 
