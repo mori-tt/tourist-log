@@ -299,9 +299,12 @@ export default function ArticleDetailPage() {
                 )}
               </div>
               <div className="mt-4">
-                <Button onClick={() => router.back()} className="mt-4">
+                <button
+                  onClick={() => router.back()}
+                  className="inline-flex items-center justify-center h-9 px-3 py-2 text-sm font-medium rounded-md border border-primary text-primary hover:text-primary/80 active:text-primary/80 focus:text-primary focus:outline-none group transition-all mt-4"
+                >
                   戻る
-                </Button>
+                </button>
               </div>
             </CardContent>
           </Card>
@@ -343,7 +346,11 @@ export default function ArticleDetailPage() {
             <li>記事を購入した広告主</li>
             <li>管理者</li>
           </ul>
-          <Button onClick={() => router.back()} className="mt-4">
+          <Button
+            variant="outline"
+            onClick={() => router.back()}
+            className="mt-4"
+          >
             戻る
           </Button>
         </CardContent>
@@ -401,27 +408,38 @@ export default function ArticleDetailPage() {
             </div>
 
             <div className="mt-4 flex gap-4">
-              {canTip && <Button onClick={handleTip}>投げ銭する</Button>}
+              {canTip && (
+                <Button variant="outline" onClick={handleTip}>
+                  投げ銭する
+                </Button>
+              )}
 
               {canPurchase && (
-                <Button onClick={handlePurchase} variant="secondary">
+                <Button variant="outline" onClick={handlePurchase}>
                   この記事を購入する（{article?.xymPrice}XYM）
                 </Button>
               )}
             </div>
 
-            {isAuthor && !article?.isPurchased && (
+            {/* 著者は未購入の記事のみ、管理者はすべての記事を削除可能 */}
+            {(isAuthor && !article?.isPurchased) || isAdmin ? (
               <div className="mt-4 flex gap-4">
-                <Link href={`/article/${article?.id}/edit`}>
-                  <Button>編集</Button>
-                </Link>
+                {isAuthor && !article?.isPurchased && (
+                  <Link href={`/article/${article?.id}/edit`}>
+                    <Button variant="outline">編集</Button>
+                  </Link>
+                )}
                 <Button variant="destructive" onClick={handleDelete}>
                   削除
                 </Button>
               </div>
-            )}
+            ) : null}
             <div className="mt-4">
-              <Button onClick={() => router.back()} className="mt-4">
+              <Button
+                variant="outline"
+                onClick={() => router.back()}
+                className="mt-4"
+              >
                 戻る
               </Button>
             </div>
@@ -478,7 +496,7 @@ export default function ArticleDetailPage() {
                 キャンセル
               </Button>
               <Button
-                type="submit"
+                variant="outline"
                 onClick={handleTipSubmit}
                 disabled={isSubmitting}
               >
@@ -526,7 +544,7 @@ export default function ArticleDetailPage() {
                 キャンセル
               </Button>
               <Button
-                type="submit"
+                variant="outline"
                 onClick={submitPurchase}
                 disabled={isPurchaseSubmitting}
               >

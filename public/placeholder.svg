@@ -1,0 +1,13 @@
+<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E6F2F8"/>
+      <stop offset="100%" stop-color="#C5E4F3"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#bg)"/>
+  <g>
+    <text x="400" y="300" font-family="Arial, sans-serif" font-size="40" text-anchor="middle" fill="#2B7CB1">Tourist Log</text>
+    <text x="400" y="350" font-family="Arial, sans-serif" font-size="20" text-anchor="middle" fill="#5A96B8">地方の魅力を発見する旅へ</text>
+  </g>
+</svg> 

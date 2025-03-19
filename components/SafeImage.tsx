@@ -18,7 +18,7 @@ export default function SafeImage({
 }: SafeImageProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isError, setIsError] = useState(false);
-  const fallbackImage = "/images/placeholder.jpg"; // フォールバックイメージのパス
+  const fallbackImage = "/placeholder.svg"; // フォールバックイメージのパス
 
   // URLが有効かチェック
   const isValidUrl = (url: string) => {
