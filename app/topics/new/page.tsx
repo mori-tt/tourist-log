@@ -1,106 +1,78 @@
 "use client";
 
-import { useForm } from "react-hook-form";
-import { useSession, signIn } from "next-auth/react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useTopics } from "@/context/TopicsContext";
-import Link from "next/link";
+import React, { useState } from "react";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
-interface TopicFormData {
-  title: string;
-  content: string;
-  adFee: number;
-  monthlyPVThreshold: number;
-}
-
-export default function TopicPostPage() {
-  const { data: session, status } = useSession();
-  const { addTopic } = useTopics();
-  const { register, handleSubmit, reset } = useForm<TopicFormData>();
+export default function NewTopicPage() {
+  const { data: session } = useSession();
   const router = useRouter();
 
-  if (status === "loading") return <p>Loading...</p>;
-  if (!session || !(session.user.isAdvertiser || session.user.isAdmin)) {
-    signIn();
-    return null;
+  // すべてのHooksを最初に宣言
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  if (!session || !session.user?.isAdvertiser) {
+    return <div>権限がありません。</div>;
   }
 
-  const onSubmit = async (data: TopicFormData) => {
-    const newTopicData = {
-      title: data.title,
-      content: data.content,
-      adFee: data.adFee,
-      monthlyPVThreshold: data.monthlyPVThreshold,
-      advertiserId: session.user.id || "",
-    };
-
-    const res = await fetch("/api/topics", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newTopicData),
-    });
-    if (res.ok) {
-      const createdTopic = await res.json();
-      addTopic(createdTopic); // クライアント側の Context に追加
-      reset();
-      router.push("/"); // 登録後、初期画面に遷移
-    } else {
-      console.error("トピックの保存に失敗しました");
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setIsSubmitting(true);
+    try {
+      const res = await fetch("/api/topics", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, description }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "トピックの投稿に失敗しました");
+      }
+      router.push("/topics");
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("トピックの投稿中にエラーが発生しました");
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <Card className="m-8 p-8">
-      <CardHeader>
-        <CardTitle>新しいトピックの投稿</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div>
-            <label className="block mb-1">タイトル</label>
-            <Input
-              placeholder="トピックのタイトル"
-              {...register("title", { required: true })}
-            />
-          </div>
-          <div>
-            <label className="block mb-1">内容</label>
-            <Textarea
-              placeholder="トピックの内容"
-              {...register("content", { required: true })}
-            />
-          </div>
-          <div>
-            <label className="block mb-1">広告料 (XYM)</label>
-            <Input
-              type="number"
-              placeholder="広告料"
-              {...register("adFee", { required: true, valueAsNumber: true })}
-            />
-          </div>
-          <div>
-            <label className="block mb-1">月のPV支払い基準</label>
-            <Input
-              type="number"
-              placeholder="月のPV支払い基準"
-              {...register("monthlyPVThreshold", {
-                required: true,
-                valueAsNumber: true,
-              })}
-            />
-          </div>
-          <Button type="submit">トピックを投稿</Button>
-        </form>
-      </CardContent>
-      <div className="mt-4">
-        <Link href="/">
-          <Button variant="outline">ホームへ</Button>
-        </Link>
-      </div>
-    </Card>
+    <div className="container mx-auto py-8 px-4 max-w-2xl">
+      <h1 className="text-2xl font-bold mb-4">新しいトピックを投稿</h1>
+      {error && <p className="text-red-500">{error}</p>}
+      <form onSubmit={handleSubmit}>
+        <div className="mb-4">
+          <label className="block mb-1">タイトル</label>
+          <Input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            required
+          />
+        </div>
+        <div className="mb-4">
+          <label className="block mb-1">説明</label>
+          <Input
+            type="text"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            required
+          />
+        </div>
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "投稿中..." : "投稿する"}
+        </Button>
+      </form>
+    </div>
   );
 }

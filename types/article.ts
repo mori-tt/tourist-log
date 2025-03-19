@@ -19,6 +19,7 @@ export interface Article {
     id: string;
     walletAddress?: string;
   };
+  views?: number;
 }
 
 export interface ArticleFormData {

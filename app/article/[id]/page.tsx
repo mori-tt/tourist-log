@@ -20,7 +20,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import WalletAddressAlert from "@/components/WalletAddressAlert";
+import {
+  ArrowLeft,
+  Edit,
+  Trash,
+  User,
+  Calendar,
+  DollarSign,
+  Tag,
+  TrendingUp,
+} from "lucide-react";
 
 export default function ArticleDetailPage() {
   const { data: session, status } = useSession();
@@ -246,310 +255,373 @@ export default function ArticleDetailPage() {
     }
   };
 
-  if (status === "loading") return <p>Loading...</p>;
-  if (!session) {
-    if (!article) return <p>記事が見つかりません。</p>;
-
-    const topicTitle =
-      article.topic?.title ||
-      topics.find((t) => t.id === article.topicId)?.title ||
-      "トピックなし";
-
+  if (status === "loading") {
     return (
-      <>
-        <div className="mx-auto max-w-4xl px-4 sm:px-6 md:px-8">
-          <Card className="mx-2 sm:m-4 md:m-8 p-4 sm:p-6 md:p-8">
-            <CardHeader>
-              <CardTitle className="text-2xl font-bold mb-4">
-                {article.title}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p>著者: {authorName}</p>
-              <p>トピック: {topicTitle}</p>
-              <div className="my-4">
-                <MarkdownWithZoomableImages content={article.content} />
-              </div>
-              {article.images && article.images.length > 0 && (
-                <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                  {article.images.map((img: { url: string }, index: number) => (
-                    <div
-                      key={index}
-                      className="relative aspect-square w-full h-40 md:h-48 overflow-hidden"
-                    >
-                      <SafeImage
-                        src={img.url}
-                        alt={`Article Image ${index}`}
-                        fill
-                        className="object-cover border rounded"
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div className="mt-4">
-                <p className="text-sm text-gray-500">
-                  更新日時: {article.updatedAt.split("T")[0]}
-                </p>
-                <p className="text-sm text-gray-500">著者: {authorName}</p>
-                <p className="text-sm text-gray-500">
-                  買取金額: {article.xymPrice}XYM
-                </p>
-                {article.isPurchased && (
-                  <p className="text-sm font-semibold text-green-600 mt-1">
-                    ※この記事は購入済みです
-                  </p>
-                )}
-              </div>
-              <div className="mt-4">
-                <Button variant="outline" onClick={() => router.back()}>
-                  戻る
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </>
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
     );
   }
 
-  const isAdmin = session.user?.isAdmin;
-  const isAdvertiser = session.user?.isAdvertiser;
-  const isGeneral = !isAdmin && !isAdvertiser;
-  const isAuthor = session.user.id === article?.userId;
-  const isPurchaser = article?.purchasedBy === session.user.id;
-
-  const topicTitle =
-    article?.topic?.title ||
-    topics.find((t) => t.id === article?.topicId)?.title ||
-    "トピックなし";
-
-  const canTip =
-    !isAuthor && (isGeneral || isAdvertiser) && !article?.isPurchased;
-  const canPurchase = isAdvertiser && !article?.isPurchased;
-
-  // 購入済み記事のアクセス制御
-  const canViewPurchasedArticle = isAdmin || isAuthor || isPurchaser;
-  if (article?.isPurchased && !canViewPurchasedArticle) {
+  // 記事が見つからない場合
+  if (!article) {
     return (
-      <Card className="m-8 p-8">
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold mb-4">
-            アクセス制限
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p>この記事は購入済みのため、閲覧権限がありません。</p>
-          <p>記事を閲覧できるのは以下のユーザーのみです：</p>
-          <ul className="list-disc ml-5 mt-2">
-            <li>記事を投稿したユーザー</li>
-            <li>記事を購入した広告主</li>
-            <li>管理者</li>
-          </ul>
-          <Button
-            variant="outline"
-            onClick={() => router.back()}
-            className="mt-4"
-          >
-            戻る
-          </Button>
-        </CardContent>
-      </Card>
+      <div className="container mx-auto py-12 px-4">
+        <Card className="bg-card shadow-sm rounded-xl overflow-hidden">
+          <CardContent className="p-12 text-center">
+            <div className="text-5xl mb-4">🔍</div>
+            <h2 className="text-2xl font-bold mb-4">記事が見つかりません</h2>
+            <p className="text-muted-foreground mb-8">
+              お探しの記事は削除されたか、存在しない可能性があります。
+            </p>
+            <Link href="/">
+              <Button>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                ホームに戻る
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
+
+  // 記事コンテンツの取得とアクセス制御
+  const getArticleContent = () => {
+    // 未ログインの場合は未購入の記事のみ表示、購入済みは非表示
+    if (!session) {
+      if (!article.isPurchased) {
+        return article.content;
+      } else {
+        return "この記事は購入後にご覧いただけます。";
+      }
+    }
+
+    // アクセス権の確認: 自分の記事、購入済み記事、管理者は全て閲覧可能
+    if (
+      article.userId === session.user.id ||
+      article.purchasedBy === session.user.id ||
+      session.user.isAdmin
+    ) {
+      return article.content;
+    }
+
+    // それ以外で購入済み記事は購入後に閲覧可能
+    if (article.isPurchased) {
+      return "この記事は購入後にご覧いただけます。";
+    }
+
+    return article.content;
+  };
+
+  // 記事の関連トピック取得
+  const relatedTopic = topics.find((t) => t.id === article.topicId);
+
+  // 編集権限の確認: 自分の記事または管理者のみ
+  const canEdit =
+    session && (article.userId === session.user.id || session.user.isAdmin);
 
   return (
-    <>
-      <div className="mx-auto max-w-4xl px-4 sm:px-6 md:px-8">
-        <WalletAddressAlert />
+    <div className="container mx-auto py-8 px-4 max-w-5xl">
+      <div className="mb-8">
+        <Link
+          href="/"
+          className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          <span>ホームに戻る</span>
+        </Link>
+      </div>
 
-        <Card className="mx-2 sm:m-4 md:m-8 p-4 sm:p-6 md:p-8">
-          <CardHeader>
-            <CardTitle className="text-2xl font-bold mb-4">
-              {article?.title}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p>著者: {authorName}</p>
-            <p>トピック: {topicTitle}</p>
-            <div className="my-4">
-              <MarkdownWithZoomableImages content={article?.content || ""} />
+      <Card className="bg-card shadow-sm rounded-xl overflow-hidden mb-8">
+        <div className="bg-gradient-to-r from-primary/10 to-primary/5 p-6 sm:p-8 border-b">
+          <h1 className="text-2xl sm:text-3xl font-bold mb-3">
+            {article.title}
+          </h1>
+
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+            <div className="flex items-center text-muted-foreground">
+              <User className="h-4 w-4 mr-1" />
+              <span>{authorName}</span>
             </div>
-            {article?.images && article?.images.length > 0 && (
-              <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                {article?.images.map((img: { url: string }, index: number) => (
-                  <div
+            <div className="flex items-center text-muted-foreground">
+              <Calendar className="h-4 w-4 mr-1" />
+              <span>
+                {new Date(article.updatedAt).toLocaleDateString("ja-JP")}
+              </span>
+            </div>
+            {relatedTopic && (
+              <Link
+                href={`/topics/${relatedTopic.id}`}
+                className="flex items-center text-primary hover:underline"
+              >
+                <Tag className="h-4 w-4 mr-1" />
+                <span>{relatedTopic.title}</span>
+              </Link>
+            )}
+          </div>
+        </div>
+
+        <div className="p-6 sm:p-8">
+          {/* 購入要件のメッセージ表示 */}
+          {article.isPurchased && !article.purchasedBy && !canEdit && (
+            <div className="bg-primary/5 border border-primary/10 rounded-lg p-4 mb-6">
+              <div className="flex items-start">
+                <DollarSign className="h-5 w-5 text-primary mt-0.5 mr-3 flex-shrink-0" />
+                <div>
+                  <h3 className="font-medium mb-1">この記事は購入が必要です</h3>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    この記事の全文を読むには {article.xymPrice} XYM
+                    で購入してください。
+                  </p>
+                  {session ? (
+                    <Button
+                      onClick={handlePurchase}
+                      className="flex items-center"
+                    >
+                      <DollarSign className="h-4 w-4 mr-2" />
+                      {article.xymPrice} XYMで記事を購入
+                    </Button>
+                  ) : (
+                    <Link href="/login">
+                      <Button variant="outline">ログインして購入</Button>
+                    </Link>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 記事コンテンツ */}
+          <div className="prose prose-sm sm:prose max-w-none">
+            {/* 記事の画像を表示 */}
+            {article.images && article.images.length > 0 && (
+              <div className="mb-6 grid gap-4 grid-cols-1 sm:grid-cols-2">
+                {article.images.map((image, index) => (
+                  <SafeImage
                     key={index}
-                    className="relative aspect-square w-full h-40 md:h-48 overflow-hidden"
-                  >
-                    <SafeImage
-                      src={img.url}
-                      alt={`Article Image ${index}`}
-                      fill
-                      className="object-cover border rounded"
-                    />
-                  </div>
+                    src={image.url}
+                    alt={`記事の画像 ${index + 1}`}
+                    width={800}
+                    height={600}
+                    className="rounded-lg shadow-md w-full h-auto object-cover"
+                  />
                 ))}
               </div>
             )}
-            <div className="mt-4">
-              <p className="text-sm text-gray-500">
-                更新日時: {article?.updatedAt?.split("T")[0]}
-              </p>
-              <p className="text-sm text-gray-500">著者: {authorName}</p>
-              <p className="text-sm text-gray-500">
-                買取金額: {article?.xymPrice}XYM
-              </p>
-              {article?.isPurchased && (
-                <p className="text-sm font-semibold text-green-600 mt-1">
-                  ※この記事は購入済みです
-                </p>
-              )}
-            </div>
 
-            <div className="mt-4 flex gap-4">
-              {canTip && (
-                <Button variant="outline" onClick={handleTip}>
-                  投げ銭する
+            <MarkdownWithZoomableImages content={getArticleContent()} />
+          </div>
+
+          {/* 記事価格を全ユーザーに表示 */}
+          <div className="mt-6 bg-amber-50 border border-amber-200 rounded-lg p-4">
+            <div className="flex items-center text-amber-800">
+              <DollarSign className="h-5 w-5 flex-shrink-0 mr-2" />
+              <p className="font-medium">記事価格: {article.xymPrice} XYM</p>
+            </div>
+          </div>
+
+          {/* 記事のアクション */}
+          <div className="flex flex-wrap gap-4 mt-8">
+            {/* 広告主のみ表示する投げ銭ボタン */}
+            {session?.user?.isAdvertiser &&
+              session.user.id !== article.userId && (
+                <Button
+                  onClick={handleTip}
+                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+                >
+                  <DollarSign className="h-4 w-4" />
+                  投げ銭
                 </Button>
               )}
 
-              {canPurchase && (
-                <Button variant="outline" onClick={handlePurchase}>
-                  この記事を購入する（{article?.xymPrice}XYM）
+            {/* 広告主のみ表示する記事購入ボタン */}
+            {session?.user?.isAdvertiser &&
+              session.user.id !== article.userId && (
+                <Button
+                  onClick={handlePurchase}
+                  className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700"
+                >
+                  <DollarSign className="h-4 w-4" />
+                  記事を購入 ({article.xymPrice} XYM)
                 </Button>
               )}
-            </div>
 
-            {/* 著者は未購入の記事のみ、管理者はすべての記事を削除可能 */}
-            {(isAuthor && !article?.isPurchased) || isAdmin ? (
-              <div className="mt-4 flex gap-4">
-                {isAuthor && !article?.isPurchased && (
-                  <Link href={`/article/${article?.id}/edit`}>
-                    <Button variant="outline">編集</Button>
-                  </Link>
-                )}
-                <Button variant="destructive" onClick={handleDelete}>
+            {/* PVによる広告料の表示 - 広告主向け情報 */}
+            {session?.user?.isAdvertiser && (
+              <div className="flex items-center gap-2 text-sm text-gray-600 border border-gray-200 rounded-md px-3 py-2">
+                <TrendingUp className="h-4 w-4" />
+                <span>PV: {article.views || 0}</span>
+                <span className="mx-1">|</span>
+                <span>
+                  推定広告料: {Math.floor((article.views || 0) * 0.01)} XYM
+                </span>
+              </div>
+            )}
+
+            {/* 記事所有者に広告収益情報を表示 */}
+            {session?.user?.id === article.userId && (
+              <div className="flex items-center gap-2 text-sm bg-blue-50 text-blue-700 border border-blue-200 rounded-md px-3 py-2">
+                <TrendingUp className="h-4 w-4" />
+                <span>PV: {article.views || 0}</span>
+                <span className="mx-1">|</span>
+                <span>
+                  広告収益: {Math.floor((article.views || 0) * 0.01)} XYM
+                </span>
+              </div>
+            )}
+
+            {/* 投稿者にだけ編集削除を表示 */}
+            {session?.user?.id === article.userId && (
+              <>
+                <Link href={`/article/${articleId}/edit`}>
+                  <Button variant="outline" className="flex items-center gap-2">
+                    <Edit className="h-4 w-4" />
+                    編集
+                  </Button>
+                </Link>
+                <Button
+                  variant="destructive"
+                  onClick={handleDelete}
+                  className="flex items-center gap-2"
+                >
+                  <Trash className="h-4 w-4" />
                   削除
                 </Button>
-              </div>
-            ) : null}
-            <div className="mt-4">
-              <Button variant="outline" onClick={() => router.back()}>
-                戻る
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+              </>
+            )}
 
-        {/* 投げ銭ダイアログ */}
-        <Dialog open={tipDialogOpen} onOpenChange={setTipDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>投げ銭を送る</DialogTitle>
-              <DialogDescription>
-                送金額とご自身のSymbolウォレットの秘密鍵を入力してください。
-                {success && (
-                  <p className="mt-2 text-green-600 break-all">{success}</p>
-                )}
-                {error && (
-                  <p className="mt-2 text-red-600 break-all">{error}</p>
-                )}
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="tipAmount" className="text-right">
-                  XYM
-                </label>
-                <Input
-                  id="tipAmount"
-                  type="number"
-                  className="col-span-3"
-                  value={tipAmount}
-                  onChange={(e) => setTipAmount(Number(e.target.value))}
-                  min="100"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="privateKey" className="text-right">
-                  秘密鍵
-                </label>
-                <Input
-                  id="privateKey"
-                  type="password"
-                  className="col-span-3"
-                  value={walletPrivateKey}
-                  onChange={(e) => setWalletPrivateKey(e.target.value)}
-                  placeholder="あなたのSymbolウォレットの秘密鍵"
-                />
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setTipDialogOpen(false)}>
-                キャンセル
-              </Button>
+            {/* 管理者に削除ボタンを表示 */}
+            {session?.user?.isAdmin && session?.user?.id !== article.userId && (
               <Button
-                variant="outline"
-                onClick={handleTipSubmit}
-                disabled={isSubmitting}
+                variant="destructive"
+                onClick={handleDelete}
+                className="flex items-center gap-2"
               >
-                {isSubmitting ? "処理中..." : "送信"}
+                <Trash className="h-4 w-4" />
+                削除（管理者）
               </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            )}
+          </div>
+        </div>
+      </Card>
 
-        {/* 記事購入ダイアログ */}
-        <Dialog open={purchaseDialogOpen} onOpenChange={setPurchaseDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>記事を購入する</DialogTitle>
-              <DialogDescription>
-                この記事を{article?.xymPrice}
-                XYMで購入します。秘密鍵を入力してください。
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="purchasePrivateKey" className="text-right">
-                  秘密鍵
-                </label>
-                <Input
-                  id="purchasePrivateKey"
-                  type="password"
-                  className="col-span-3"
-                  value={purchaseWalletPrivateKey}
-                  onChange={(e) => setPurchaseWalletPrivateKey(e.target.value)}
-                  placeholder="あなたのSymbolウォレットの秘密鍵"
-                />
-              </div>
-              {purchaseError && (
-                <p className="text-sm text-red-500">{purchaseError}</p>
-              )}
+      {/* 著者情報カード */}
+      <Card className="bg-card shadow-sm rounded-xl overflow-hidden mb-8">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center">
+            <User className="h-5 w-5 mr-2" />
+            著者について
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+              <User className="h-8 w-8 text-primary" />
             </div>
+            <div>
+              <h3 className="font-medium text-lg">{authorName}</h3>
+              <p className="text-sm text-muted-foreground">
+                地方の魅力を発信するクリエイター
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setPurchaseDialogOpen(false)}
-              >
-                キャンセル
-              </Button>
-              <Button
-                variant="outline"
-                onClick={submitPurchase}
-                disabled={isPurchaseSubmitting}
-              >
-                {isPurchaseSubmitting ? "処理中..." : "購入する"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
-    </>
+      {/* 投げ銭ダイアログ */}
+      <Dialog open={tipDialogOpen} onOpenChange={setTipDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>投げ銭する</DialogTitle>
+            <DialogDescription>
+              記事の作者に投げ銭をして支援しましょう。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="tipAmount" className="text-right">
+                金額 (XYM)
+              </label>
+              <Input
+                id="tipAmount"
+                type="number"
+                value={tipAmount}
+                onChange={(e) => setTipAmount(Number(e.target.value))}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="privateKey" className="text-right">
+                秘密鍵
+              </label>
+              <Input
+                id="privateKey"
+                type="password"
+                value={walletPrivateKey}
+                onChange={(e) => setWalletPrivateKey(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+            {error && <p className="text-red-500 text-sm">{error}</p>}
+            {success && <p className="text-green-500 text-sm">{success}</p>}
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={handleTipSubmit}
+              disabled={isSubmitting || !walletPrivateKey || tipAmount <= 0}
+            >
+              {isSubmitting ? "送信中..." : "投げ銭を送る"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 記事購入ダイアログ */}
+      <Dialog open={purchaseDialogOpen} onOpenChange={setPurchaseDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>記事を購入する</DialogTitle>
+            <DialogDescription>
+              {article.xymPrice} XYMを支払って記事を購入します。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="bg-muted p-3 rounded-lg flex items-center gap-3">
+              <DollarSign className="h-5 w-5 text-primary" />
+              <div>
+                <p className="font-medium">{article.title}</p>
+                <p className="text-sm text-muted-foreground">
+                  価格: {article.xymPrice} XYM
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="purchasePrivateKey" className="text-right">
+                秘密鍵
+              </label>
+              <Input
+                id="purchasePrivateKey"
+                type="password"
+                value={purchaseWalletPrivateKey}
+                onChange={(e) => setPurchaseWalletPrivateKey(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+            {purchaseError && (
+              <p className="text-red-500 text-sm">{purchaseError}</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={submitPurchase}
+              disabled={isPurchaseSubmitting || !purchaseWalletPrivateKey}
+            >
+              {isPurchaseSubmitting ? "処理中..." : "購入する"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

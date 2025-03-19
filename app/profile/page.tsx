@@ -1,191 +1,266 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useSession, signIn } from "next-auth/react";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { redirect } from "next/navigation";
+import { User, Calendar, Globe, BookOpen, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { AlertCircle, CheckCircle2 } from "lucide-react";
-import { isValidSymbolAddress } from "@/utils/symbolValidation";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { useTopics } from "@/context/TopicsContext";
+import { useArticles } from "@/context/ArticlesContext";
+import Link from "next/link";
+import Image from "next/image";
+
+// ユーザー情報の型定義
+interface UserInfo {
+  id: string;
+  name: string;
+  isAdmin: boolean;
+  isAdvertiser: boolean;
+  joinedAt: string;
+  prefecture: string;
+  interests: string[];
+  image?: string;
+}
 
 export default function ProfilePage() {
-  const { data: session, status, update } = useSession();
-  const [walletAddress, setWalletAddress] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const [isValidAddress, setIsValidAddress] = useState(true);
+  const { data: session, status } = useSession();
+  const [isLoading, setIsLoading] = useState(true);
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const { topics } = useTopics();
+  const { articles } = useArticles();
 
-  // ウォレットアドレスを取得する関数
-  const fetchWalletAddress = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/user/${session?.user?.id}`);
-      if (res.ok) {
-        const userData = await res.json();
-        setWalletAddress(userData.walletAddress || "");
-      } else {
-        console.error("Failed to fetch wallet address");
-      }
-    } catch (error) {
-      console.error("Error fetching wallet address:", error);
-    }
-  }, [session?.user?.id]);
+  // このユーザーが関連するトピックと記事をフィルタリング
+  const userTopics = topics.filter(
+    (topic) => session?.user?.id && topic.advertiserId === session.user.id
+  );
+  const userArticles = articles.filter(
+    (article) => session?.user?.id && article.userId === session.user.id
+  );
 
   useEffect(() => {
-    if (session?.user?.id) {
-      fetchWalletAddress();
-    }
-  }, [session, fetchWalletAddress]);
+    if (status === "loading") return;
 
-  // ウォレットアドレスを検証する関数
-  const validateAddress = (address: string) => {
-    if (!address) {
-      setIsValidAddress(true);
-      return;
-    }
-    const isValid = isValidSymbolAddress(address);
-    setIsValidAddress(isValid);
-    return isValid;
-  };
-
-  // ウォレットアドレスを更新する関数
-  const updateWalletAddress = async () => {
-    setError("");
-    setSuccess("");
-
-    // 入力がない場合は早期リターン
-    if (!walletAddress) {
-      setError("ウォレットアドレスを入力してください");
-      return;
+    if (!session) {
+      redirect("/login");
     }
 
-    // 検証する
-    if (!validateAddress(walletAddress)) {
-      setError("有効なSymbolアドレスではありません");
-      return;
-    }
+    // 仮のユーザー情報を作成
+    const dummyUserInfo: UserInfo = {
+      id: session?.user?.id || "unknown",
+      name: session?.user?.name || "名前未設定",
+      isAdmin: session?.user?.isAdmin || false,
+      isAdvertiser: session?.user?.isAdvertiser || false,
+      joinedAt: "2023年1月1日",
+      prefecture: "東京都",
+      interests: ["観光", "グルメ", "文化体験"],
+    };
 
-    setIsSubmitting(true);
+    setUserInfo(dummyUserInfo);
+    setIsLoading(false);
+  }, [session, status]);
 
-    try {
-      const res = await fetch("/api/user/wallet", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          userId: session?.user?.id,
-          walletAddress,
-        }),
-      });
-
-      if (res.ok) {
-        setSuccess("ウォレットアドレスが正常に更新されました");
-        // セッション情報を更新（必要に応じて）
-        await update();
-      } else {
-        const data = await res.json();
-        setError(data.error || "ウォレットアドレスの更新に失敗しました");
-      }
-    } catch (error) {
-      console.error("Error updating wallet address:", error);
-      setError("ウォレットアドレスの更新中にエラーが発生しました");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  if (status === "loading") {
-    return <p className="p-8">Loading...</p>;
+  if (status === "loading" || isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
   }
 
-  if (!session) {
-    signIn();
-    return null;
+  if (!userInfo) {
+    return <div>ユーザー情報が見つかりません</div>;
   }
 
   return (
-    <div className="p-8">
-      <Card className="max-w-2xl mx-auto">
-        <CardHeader>
-          <CardTitle>プロフィール設定</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div>
-            <Label htmlFor="name">名前</Label>
-            <Input id="name" value={session.user?.name || ""} disabled />
-          </div>
+    <div className="container mx-auto py-10 px-4 max-w-4xl">
+      <h1 className="text-3xl font-bold mb-8">プロフィール</h1>
 
-          <div>
-            <Label htmlFor="email">メールアドレス</Label>
-            <Input id="email" value={session.user?.email || ""} disabled />
-          </div>
+      <div className="grid md:grid-cols-3 gap-6">
+        {/* プロフィールカード */}
+        <div className="md:col-span-1">
+          <Card>
+            <CardHeader className="text-center pb-2">
+              {userInfo.image ? (
+                <div className="relative w-32 h-32 mx-auto mb-4">
+                  <Image
+                    src={userInfo.image}
+                    alt={userInfo.name}
+                    fill
+                    className="rounded-full object-cover border-4 border-primary/10"
+                  />
+                </div>
+              ) : (
+                <div className="w-32 h-32 rounded-full mx-auto mb-4 bg-primary/10 flex items-center justify-center">
+                  <User size={50} className="text-primary" />
+                </div>
+              )}
+              <CardTitle className="text-xl">{userInfo.name}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4 pt-4">
+                <div className="flex items-center text-sm">
+                  <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
+                  <span>登録日: {userInfo.joinedAt}</span>
+                </div>
+                <div className="flex items-center text-sm">
+                  <Globe className="mr-2 h-4 w-4 text-muted-foreground" />
+                  <span>エリア: {userInfo.prefecture}</span>
+                </div>
 
-          <div>
-            <Label htmlFor="walletAddress" className="mb-1 block">
-              Symbolウォレットアドレス
-              <span className="text-sm text-muted-foreground ml-2">
-                (投げ銭や記事購入、広告費の支払いに必要です)
-              </span>
-            </Label>
-            <Input
-              id="walletAddress"
-              value={walletAddress}
-              onChange={(e) => {
-                const value = e.target.value;
-                setWalletAddress(value);
-                validateAddress(value);
-              }}
-              placeholder="あなたのSymbolウォレットアドレスを入力"
-              className={!isValidAddress ? "border-red-500" : ""}
-            />
-
-            {!isValidAddress && (
-              <div className="flex items-center text-red-500 text-sm mt-1">
-                <AlertCircle className="h-4 w-4 mr-1" />
-                <span>有効なSymbolアドレスではありません</span>
+                {(userInfo.isAdmin || userInfo.isAdvertiser) && (
+                  <div className="pt-2">
+                    {userInfo.isAdmin && (
+                      <div className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded mr-2">
+                        管理者
+                      </div>
+                    )}
+                    {userInfo.isAdvertiser && (
+                      <div className="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded">
+                        広告主
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-            )}
+            </CardContent>
+          </Card>
+        </div>
 
-            {error && (
-              <div className="flex items-center text-red-500 text-sm mt-2">
-                <AlertCircle className="h-4 w-4 mr-1" />
-                <span>{error}</span>
+        {/* ユーザー情報 */}
+        <div className="md:col-span-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>ユーザー情報</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <div>
+                  <h3 className="font-medium mb-2">関心のあるテーマ</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {userInfo.interests.map((interest: string) => (
+                      <div
+                        key={interest}
+                        className="bg-gray-100 px-3 py-1 rounded-full text-sm"
+                      >
+                        {interest}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div>
+                  <h3 className="font-medium mb-4">アカウント設定</h3>
+                  <div className="space-y-3">
+                    <Button variant="outline" className="w-full sm:w-auto">
+                      プロフィールを編集
+                    </Button>
+                    <Button variant="outline" className="w-full sm:w-auto">
+                      パスワードを変更
+                    </Button>
+                    {userInfo.isAdmin && (
+                      <Link href="/admin">
+                        <Button variant="outline" className="w-full sm:w-auto">
+                          管理者ページ
+                        </Button>
+                      </Link>
+                    )}
+                  </div>
+                </div>
               </div>
-            )}
+            </CardContent>
+          </Card>
 
-            {success && (
-              <div className="flex items-center text-green-500 text-sm mt-2">
-                <CheckCircle2 className="h-4 w-4 mr-1" />
-                <span>{success}</span>
-              </div>
-            )}
-          </div>
+          {/* ユーザーのコンテンツ */}
+          {(userArticles.length > 0 || userTopics.length > 0) && (
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle>あなたのコンテンツ</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {userArticles.length > 0 && (
+                  <div className="mb-6">
+                    <h3 className="font-medium mb-3 flex items-center">
+                      <FileText className="mr-2 h-4 w-4" />
+                      投稿した記事
+                    </h3>
+                    <div className="grid gap-2">
+                      {userArticles.slice(0, 5).map((article) => (
+                        <Link
+                          key={article.id}
+                          href={`/article/${article.id}`}
+                          className="p-2 hover:bg-gray-50 rounded-md flex justify-between items-center transition-colors"
+                        >
+                          <div className="truncate">{article.title}</div>
+                          <div className="text-xs text-gray-500">
+                            {new Date(article.updatedAt).toLocaleDateString(
+                              "ja-JP"
+                            )}
+                          </div>
+                        </Link>
+                      ))}
+                      {userArticles.length > 5 && (
+                        <Link
+                          href="/my-articles"
+                          className="text-sm text-primary hover:underline text-right mt-1"
+                        >
+                          すべての記事を表示
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                )}
 
-          <div>
-            <p className="text-sm text-muted-foreground">
-              注意:
-              Symbolウォレットアドレスは投げ銭の受け取りや記事購入、広告費の支払いに使用されます。
-              正確なアドレスを入力してください。
-            </p>
-          </div>
-        </CardContent>
-        <CardFooter>
-          <Button
-            onClick={updateWalletAddress}
-            disabled={isSubmitting || !isValidAddress}
-          >
-            {isSubmitting ? "更新中..." : "ウォレットアドレスを保存"}
-          </Button>
-        </CardFooter>
-      </Card>
+                {userTopics.length > 0 && userInfo.isAdvertiser && (
+                  <div>
+                    <h3 className="font-medium mb-3 flex items-center">
+                      <BookOpen className="mr-2 h-4 w-4" />
+                      作成したトピック
+                    </h3>
+                    <div className="grid gap-2">
+                      {userTopics.slice(0, 5).map((topic) => (
+                        <Link
+                          key={topic.id}
+                          href={`/topics/${topic.id}`}
+                          className="p-2 hover:bg-gray-50 rounded-md flex justify-between items-center transition-colors"
+                        >
+                          <div className="truncate">{topic.title}</div>
+                          <div className="text-xs text-gray-500">
+                            {topic.adFee} XYM
+                          </div>
+                        </Link>
+                      ))}
+                      {userTopics.length > 5 && (
+                        <Link
+                          href="/my-topics"
+                          className="text-sm text-primary hover:underline text-right mt-1"
+                        >
+                          すべてのトピックを表示
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* 最近の活動（オプション） */}
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>最近の活動</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                活動記録はまだありません。
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }

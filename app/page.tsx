@@ -1,328 +1,257 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { useSession } from "next-auth/react";
-import { useTopics } from "@/context/TopicsContext";
-import { useArticles } from "@/context/ArticlesContext";
 import Link from "next/link";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import WalletAddressAlert from "@/components/WalletAddressAlert";
-import ReactMarkdown from "react-markdown";
+import { getPrefecturesByRegion, getRegions } from "@/lib/data/prefectures";
+import { PrefectureCard } from "@/components/PrefectureCard";
+import { HeartHandshake, Map, Sparkles, Compass, Users } from "lucide-react";
 
-export default function DashboardPage() {
+export default function HomePage() {
   const { data: session, status } = useSession();
-  const { topics } = useTopics();
-  const { articles } = useArticles();
-  const [authorNames, setAuthorNames] = useState<{ [key: string]: string }>({});
-  const [advertiserNames, setAdvertiserNames] = useState<{
-    [key: string]: string;
-  }>({});
+  const prefecturesByRegion = getPrefecturesByRegion();
+  const regions = getRegions();
 
-  // ユーザー名を非同期に取得する関数
-  const fetchUserName = async (userId: string) => {
-    try {
-      const res = await fetch(`/api/user/${userId}`);
-      if (res.ok) {
-        const userData = await res.json();
-        return userData.name || "名前未設定";
-      }
-    } catch (error) {
-      console.error("ユーザー名の取得に失敗しました:", error);
-    }
-    return "不明なユーザー";
-  };
-
-  // 記事の著者名とトピックの広告主名を取得
-  useEffect(() => {
-    const getAuthorNames = async () => {
-      const nameMap: { [key: string]: string } = {};
-      for (const article of articles) {
-        if (article.userId && !nameMap[article.userId]) {
-          nameMap[article.userId] = await fetchUserName(article.userId);
-        }
-      }
-      setAuthorNames(nameMap);
-    };
-
-    const getAdvertiserNames = async () => {
-      const nameMap: { [key: string]: string } = {};
-      for (const topic of topics) {
-        if (topic.advertiserId && !nameMap[topic.advertiserId]) {
-          nameMap[topic.advertiserId] = await fetchUserName(topic.advertiserId);
-        }
-      }
-      setAdvertiserNames(nameMap);
-    };
-
-    getAuthorNames();
-    getAdvertiserNames();
-  }, [articles, topics]);
-
-  if (status === "loading") return <p>Loading...</p>;
-  if (!session) {
-    // ログインしていなくても閲覧可能に変更
+  if (status === "loading") {
     return (
-      <div className="p-8 space-y-8">
-        <section className="mb-8">
-          <h2 className="text-2xl font-bold mb-4">記事とトピック一覧</h2>
-          <p className="mb-4">
-            投稿や編集機能を使用するには
-            <Link href="/login">
-              <Button variant="outline" className="ml-2">
-                サインアップ・ログイン
-              </Button>
-            </Link>
-            してください。
-          </p>
-        </section>
-
-        <section className="mb-8">
-          <h2 className="text-2xl font-bold mb-4">トピック一覧</h2>
-          {topics.length === 0 ? (
-            <p>トピックはありません。</p>
-          ) : (
-            topics
-              .sort((a, b) => b.id - a.id)
-              .map((topic) => (
-                <Card key={topic.id} className="mb-4">
-                  <CardHeader>
-                    <CardTitle>{topic.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-gray-500">{topic.content}</p>
-                    <p className="text-sm text-gray-500">
-                      広告主:{" "}
-                      {advertiserNames[topic.advertiserId] || "不明な広告主"}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      広告料: {topic.adFee}XYM
-                    </p>
-                    <p className="text-sm text-gray-500 mb-4">
-                      月間PV支払い基準: {topic.monthlyPVThreshold}
-                    </p>
-                    <div className="flex justify-end mb-4">
-                      <Link href={`/topics/${topic.id}`}>
-                        <Button variant="outline" size="sm">
-                          詳細
-                        </Button>
-                      </Link>
-                    </div>
-
-                    {articles
-                      .filter((article) => article.topicId === topic.id)
-                      .filter((article) => !article.isPurchased) // 未ログインの場合は未購入の記事のみ表示
-                      .sort(
-                        (a, b) =>
-                          new Date(b.updatedAt).getTime() -
-                          new Date(a.updatedAt).getTime()
-                      )
-                      .map((article) => (
-                        <Card key={article.id} className="mb-2">
-                          <CardHeader>
-                            <CardTitle className="text-lg font-bold">
-                              {article.title}
-                              {article.isPurchased && (
-                                <span className="ml-2 text-sm text-green-600">
-                                  (購入済み)
-                                </span>
-                              )}
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div>
-                              <ReactMarkdown>
-                                {article.content.slice(0, 100) + "..."}
-                              </ReactMarkdown>
-                              <p className="text-sm text-gray-500 mt-4">
-                                更新日時: {article.updatedAt.split("T")[0]}
-                              </p>
-                              <p className="text-sm text-gray-500">
-                                著者:{" "}
-                                {authorNames[article.userId] ||
-                                  "不明なユーザー"}
-                              </p>
-                              <p className="text-sm text-gray-500 mb-4">
-                                買取金額: {article.xymPrice}XYM
-                              </p>
-                            </div>
-                            <Link href={`/article/${article.id}`}>
-                              <Button variant="outline" size="sm">
-                                詳細
-                              </Button>
-                            </Link>
-                          </CardContent>
-                        </Card>
-                      ))}
-                  </CardContent>
-                </Card>
-              ))
-          )}
-        </section>
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
       </div>
     );
   }
 
-  // ユーザー属性の判定
-  const isAdmin = session.user?.isAdmin;
-  const isAdvertiser = session.user?.isAdvertiser;
-  const isGeneral = !isAdmin && !isAdvertiser;
-
   return (
-    <div className="p-8 space-y-8">
-      {/* ウォレットアドレス警告表示 */}
-      <WalletAddressAlert />
+    <div className="max-w-7xl mx-auto">
+      {/* ウォレットアドレス警告表示 (ログイン時のみ) */}
+      {session && <WalletAddressAlert />}
 
-      {/* 共通セクション - プロフィール設定 */}
-      <section className="mb-8">
-        <h2 className="text-2xl font-bold mb-4">アカウント設定</h2>
-        <div className="flex space-x-4">
-          <Link href="/profile">
-            <Button variant="outline">プロフィール設定</Button>
-          </Link>
-        </div>
-        <p className="text-sm text-muted-foreground mt-2">
-          Symbolウォレットアドレスを設定して、投げ銭や記事購入、広告費の支払いが可能になります。
-        </p>
-      </section>
-
-      {/* 広告主の場合 */}
-      {isAdvertiser && (
-        <div>
-          <section className="mb-8">
-            <h2 className="text-2xl font-bold mb-4">新規トピック作成</h2>
-            <Link href="/topics/new">
-              <Button className="mr-4">新規トピック作成</Button>
-            </Link>
-          </section>
-
-          <section className="mb-8">
-            <h2 className="text-2xl font-bold mb-4">広告主機能</h2>
-            <div className="flex space-x-4">
-              <Link href="/advertiser/pageviews">
-                <Button variant="outline">PV数入力</Button>
+      {/* ヒーローセクション */}
+      <section className="py-16 px-4 text-center">
+        <div className="max-w-3xl mx-auto">
+          <h1 className="text-4xl sm:text-5xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">
+            地元の地方クリエイターが造る Tourist Log
+          </h1>
+          <p className="text-xl text-muted-foreground mb-10 leading-relaxed">
+            日本全国の隠れた魅力を、地元クリエイターの視点で発見しよう
+          </p>
+          {!session && (
+            <div className="flex flex-wrap justify-center gap-4">
+              <Link href="/login">
+                <Button
+                  size="lg"
+                  className="rounded-full px-8 py-6 text-base h-auto"
+                >
+                  サインアップ・ログイン
+                </Button>
               </Link>
-              <Link href="/advertiser/payments">
-                <Button variant="outline">広告費支払い</Button>
+              <Link href="/topics">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="rounded-full px-8 py-6 text-base h-auto"
+                >
+                  トピック一覧
+                </Button>
               </Link>
             </div>
-          </section>
+          )}
+          {session && (
+            <div className="flex flex-wrap justify-center gap-4 mb-8">
+              {session.user?.isAdvertiser ? (
+                <Link href="/topics/new">
+                  <Button
+                    size="lg"
+                    className="rounded-full px-8 py-6 text-base h-auto bg-green-600 hover:bg-green-700"
+                  >
+                    トピック投稿
+                  </Button>
+                </Link>
+              ) : session.user?.isAdmin ? null : (
+                <Link href="/articles/new">
+                  <Button
+                    size="lg"
+                    className="rounded-full px-8 py-6 text-base h-auto bg-blue-600 hover:bg-blue-700"
+                  >
+                    記事投稿
+                  </Button>
+                </Link>
+              )}
+              <Link href="/topics">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="rounded-full px-8 py-6 text-base h-auto"
+                >
+                  トピック一覧
+                </Button>
+              </Link>
+            </div>
+          )}
         </div>
-      )}
+      </section>
 
-      {/* 一般ユーザーの場合 */}
-      {isGeneral && (
-        <div>
-          <section className="mb-8">
-            <h2 className="text-2xl font-bold mb-4">新規記事作成</h2>
-            <Link href="/article/new">
-              <Button>新規記事作成</Button>
+      {/* 地方別の都道府県一覧 */}
+      <section className="py-12 px-4 space-y-12">
+        {regions.map((region) => (
+          <div key={region} className="mb-8">
+            <h2 className="text-2xl font-bold mb-6 border-b pb-2">{region}</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {prefecturesByRegion[region].map((prefecture) => (
+                <PrefectureCard key={prefecture.id} prefecture={prefecture} />
+              ))}
+            </div>
+          </div>
+        ))}
+      </section>
+
+      {/* Tourist Logについて - 洗練されたデザイン */}
+      <section
+        id="about"
+        className="py-20 px-4 bg-gradient-to-b from-white to-gray-50"
+      >
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+              Tourist Log について
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
+              地元の視点から日本の魅力を再発見する、次世代の観光プラットフォーム
+            </p>
+            <div className="w-20 h-1 bg-primary mx-auto mt-8 rounded-full"></div>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-10">
+            <div className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow group">
+              <div className="h-2 bg-gradient-to-r from-blue-400 to-blue-600"></div>
+              <div className="p-6">
+                <div className="w-12 h-12 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <Map className="h-6 w-6" />
+                </div>
+                <h3 className="text-xl font-bold mb-3">
+                  地元クリエイターの視点
+                </h3>
+                <p className="text-muted-foreground leading-relaxed">
+                  地元をよく知る地方クリエイターが、ユニークな視点で観光情報を発信。
+                  観光ガイドには載っていない隠れた名所や体験を発見できます。
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow group">
+              <div className="h-2 bg-gradient-to-r from-green-400 to-green-600"></div>
+              <div className="p-6">
+                <div className="w-12 h-12 bg-green-50 text-green-500 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <HeartHandshake className="h-6 w-6" />
+                </div>
+                <h3 className="text-xl font-bold mb-3">記事の買取・投げ銭</h3>
+                <p className="text-muted-foreground leading-relaxed">
+                  ブロックチェーン技術を活用した記事買取機能や投げ銭機能で、クリエイターへ直接支援。
+                  価値ある情報に適切に対価を支払うエコシステムを実現します。
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow group">
+              <div className="h-2 bg-gradient-to-r from-purple-400 to-purple-600"></div>
+              <div className="p-6">
+                <div className="w-12 h-12 bg-purple-50 text-purple-500 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <Sparkles className="h-6 w-6" />
+                </div>
+                <h3 className="text-xl font-bold mb-3">
+                  広告主とクリエイターの橋渡し
+                </h3>
+                <p className="text-muted-foreground leading-relaxed">
+                  広告主が作ってほしい記事のトピックを立て、地方クリエイターが記事を作成。
+                  PVに応じた広告料の支払いなど、新しい広告モデルを提供します。
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* 特徴セクション */}
+          <div className="mt-24 grid md:grid-cols-2 gap-16">
+            <div>
+              <h3 className="text-2xl font-bold mb-6 flex items-center">
+                <Compass className="h-6 w-6 mr-3 text-primary" />
+                旅行者にとってのメリット
+              </h3>
+              <ul className="space-y-4">
+                <li className="flex">
+                  <span className="flex-shrink-0 h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center mr-3">
+                    <span className="text-primary font-medium">1</span>
+                  </span>
+                  <p className="text-muted-foreground">
+                    地元の人しか知らない隠れた名所や体験を発見できる
+                  </p>
+                </li>
+                <li className="flex">
+                  <span className="flex-shrink-0 h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center mr-3">
+                    <span className="text-primary font-medium">2</span>
+                  </span>
+                  <p className="text-muted-foreground">
+                    都道府県ごとに最新の観光情報にアクセス可能
+                  </p>
+                </li>
+                <li className="flex">
+                  <span className="flex-shrink-0 h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center mr-3">
+                    <span className="text-primary font-medium">3</span>
+                  </span>
+                  <p className="text-muted-foreground">
+                    旅の前に地元の人とつながり、個別のアドバイスをもらえる
+                  </p>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="text-2xl font-bold mb-6 flex items-center">
+                <Users className="h-6 w-6 mr-3 text-primary" />
+                クリエイターにとってのメリット
+              </h3>
+              <ul className="space-y-4">
+                <li className="flex">
+                  <span className="flex-shrink-0 h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center mr-3">
+                    <span className="text-primary font-medium">1</span>
+                  </span>
+                  <p className="text-muted-foreground">
+                    地元の魅力を発信することで収益化が可能
+                  </p>
+                </li>
+                <li className="flex">
+                  <span className="flex-shrink-0 h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center mr-3">
+                    <span className="text-primary font-medium">2</span>
+                  </span>
+                  <p className="text-muted-foreground">
+                    記事の購入や投げ銭で直接支援を受けられる
+                  </p>
+                </li>
+                <li className="flex">
+                  <span className="flex-shrink-0 h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center mr-3">
+                    <span className="text-primary font-medium">3</span>
+                  </span>
+                  <p className="text-muted-foreground">
+                    PV数に応じた継続的な収入モデルを構築可能
+                  </p>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* CTAセクション */}
+          <div className="mt-20 text-center">
+            <Link href={session ? "/topics" : "/login"}>
+              <Button
+                size="lg"
+                className="rounded-full px-8 py-6 text-base h-auto"
+              >
+                {session ? "トピックを見る" : "今すぐ始める"}
+              </Button>
             </Link>
-          </section>
+          </div>
         </div>
-      )}
-
-      {(isAdvertiser || isAdmin || isGeneral) && (
-        <div>
-          <section className="mb-8">
-            <h2 className="text-2xl font-bold mb-4">トピック管理</h2>
-            {topics.length === 0 ? (
-              <p>トピックはありません。</p>
-            ) : (
-              topics
-                .sort((a, b) => b.id - a.id)
-                .map((topic) => (
-                  <Card key={topic.id} className="mb-4">
-                    <CardHeader>
-                      <CardTitle>{topic.title}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-gray-500">{topic.content}</p>
-                      <p className="text-sm text-gray-500">
-                        広告主:{" "}
-                        {advertiserNames[topic.advertiserId] ||
-                          topic.advertiserId}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        広告料: {topic.adFee}XYM
-                      </p>
-                      <p className="text-sm text-gray-500 mb-4">
-                        月間PV支払い基準: {topic.monthlyPVThreshold}
-                      </p>
-                      <div className="flex justify-end mb-4">
-                        <Link href={`/topics/${topic.id}`}>
-                          <Button variant="outline" size="sm">
-                            詳細
-                          </Button>
-                        </Link>
-                      </div>
-
-                      {articles
-                        .filter((article) => article.topicId === topic.id)
-                        .filter((article) => {
-                          // 購入済み記事のアクセス制御
-                          if (!article.isPurchased) {
-                            // 未購入記事は誰でも閲覧可能
-                            return true;
-                          }
-                          // 購入済み記事は投稿者、購入者、管理者のみ閲覧可能
-                          return (
-                            isAdmin ||
-                            article.userId === session.user.id ||
-                            article.purchasedBy === session.user.id
-                          );
-                        })
-                        .sort(
-                          (a, b) =>
-                            new Date(b.updatedAt).getTime() -
-                            new Date(a.updatedAt).getTime()
-                        )
-                        .map((article) => (
-                          <Card key={article.id} className="mb-2">
-                            <CardHeader>
-                              <CardTitle className="text-lg font-bold">
-                                {article.title}
-                                {article.isPurchased && (
-                                  <span className="ml-2 text-sm text-green-600">
-                                    (購入済み)
-                                  </span>
-                                )}
-                              </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                              <div>
-                                <ReactMarkdown>
-                                  {article.content.slice(0, 100) + "..."}
-                                </ReactMarkdown>
-                                <p className="text-sm text-gray-500 mt-4">
-                                  更新日時: {article.updatedAt.split("T")[0]}
-                                </p>
-                                <p className="text-sm text-gray-500">
-                                  著者:{" "}
-                                  {authorNames[article.userId] ||
-                                    (article.author
-                                      ? article.author.split("@")[0]
-                                      : "不明なユーザー")}
-                                </p>
-                                <p className="text-sm text-gray-500 mb-4">
-                                  買取金額: {article.xymPrice}XYM
-                                </p>
-                              </div>
-                              <Link href={`/article/${article.id}`}>
-                                <Button variant="outline" size="sm">
-                                  詳細
-                                </Button>
-                              </Link>
-                            </CardContent>
-                          </Card>
-                        ))}
-                    </CardContent>
-                  </Card>
-                ))
-            )}
-          </section>
-        </div>
-      )}
+      </section>
     </div>
   );
 }
