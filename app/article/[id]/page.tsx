@@ -273,7 +273,10 @@ export default function ArticleDetailPage() {
               {article.images && article.images.length > 0 && (
                 <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                   {article.images.map((img: { url: string }, index: number) => (
-                    <div key={index} className="relative">
+                    <div
+                      key={index}
+                      className="relative aspect-square w-full h-40 md:h-48 overflow-hidden"
+                    >
                       <SafeImage
                         src={img.url}
                         alt={`Article Image ${index}`}
@@ -299,12 +302,9 @@ export default function ArticleDetailPage() {
                 )}
               </div>
               <div className="mt-4">
-                <button
-                  onClick={() => router.back()}
-                  className="inline-flex items-center justify-center h-9 px-3 py-2 text-sm font-medium rounded-md border border-primary text-primary hover:text-primary/80 active:text-primary/80 focus:text-primary focus:outline-none group transition-all mt-4"
-                >
+                <Button variant="outline" onClick={() => router.back()}>
                   戻る
-                </button>
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -435,11 +435,7 @@ export default function ArticleDetailPage() {
               </div>
             ) : null}
             <div className="mt-4">
-              <Button
-                variant="outline"
-                onClick={() => router.back()}
-                className="mt-4"
-              >
+              <Button variant="outline" onClick={() => router.back()}>
                 戻る
               </Button>
             </div>
