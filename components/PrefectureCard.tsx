@@ -115,7 +115,9 @@ export function PrefectureCard({
       className="block transition-transform duration-300 hover:scale-105"
     >
       <Card className={`overflow-hidden hover:shadow-lg ${className}`}>
-        <div className={`relative aspect-video bg-gradient-to-br ${gradient}`}>
+        <div
+          className={`relative sm:aspect-video aspect-[4/3] bg-gradient-to-br ${gradient}`}
+        >
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <span className="text-4xl" role="img" aria-label={prefecture.name}>
               {emoji}
@@ -125,7 +127,7 @@ export function PrefectureCard({
             </span>
           </div>
         </div>
-        <CardContent className="p-4">
+        <CardContent className="p-3 sm:p-4">
           <h3 className="font-medium text-lg">{prefecture.name}</h3>
           <p className="text-muted-foreground text-sm">{prefecture.region}</p>
         </CardContent>

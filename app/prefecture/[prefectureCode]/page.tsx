@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useTopics } from "@/context/TopicsContext";
 import { useArticles } from "@/context/ArticlesContext";
@@ -105,6 +105,7 @@ function getPrefectureRegion(code: string): string {
 
 export default function PrefecturePage() {
   const params = useParams();
+  const router = useRouter();
   const prefectureCode = params.prefectureCode as string;
   const prefecture = getPrefectureByCode(prefectureCode);
 
@@ -211,11 +212,15 @@ export default function PrefecturePage() {
               </div>
             </div>
             <div>
-              <Link href="/">
-                <Button className="bg-white/90 text-gray-900 hover:bg-white">
-                  トップへ戻る
-                </Button>
-              </Link>
+              <Button
+                className="bg-white/90 text-gray-900 hover:bg-white"
+                onClick={() => {
+                  console.log("トップへ戻るボタンがクリックされました");
+                  router.push("/");
+                }}
+              >
+                トップへ戻る
+              </Button>
             </div>
           </div>
         </div>

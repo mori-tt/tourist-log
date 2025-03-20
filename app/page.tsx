@@ -97,7 +97,7 @@ export default function HomePage() {
         {regions.map((region) => (
           <div key={region} className="mb-8">
             <h2 className="text-2xl font-bold mb-6 border-b pb-2">{region}</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
               {prefecturesByRegion[region].map((prefecture) => (
                 <PrefectureCard key={prefecture.id} prefecture={prefecture} />
               ))}
@@ -106,11 +106,8 @@ export default function HomePage() {
         ))}
       </section>
 
-      {/* Tourist Logについて - 洗練されたデザイン */}
-      <section
-        id="about"
-        className="py-20 px-4 bg-gradient-to-b from-white to-gray-50"
-      >
+      {/* Tourist Logについて */}
+      <section id="about" className="py-20 px-4">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">
@@ -119,12 +116,10 @@ export default function HomePage() {
             <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
               地元の視点から日本の魅力を再発見する、次世代の観光プラットフォーム
             </p>
-            <div className="w-20 h-1 bg-primary mx-auto mt-8 rounded-full"></div>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-10">
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow group">
-              <div className="h-2 bg-gradient-to-r from-blue-400 to-blue-600"></div>
+          <div className="grid md:grid-cols-3 gap-6">
+            <div className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow">
               <div className="p-6">
                 <div className="w-12 h-12 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                   <Map className="h-6 w-6" />
@@ -139,8 +134,7 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow group">
-              <div className="h-2 bg-gradient-to-r from-green-400 to-green-600"></div>
+            <div className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow">
               <div className="p-6">
                 <div className="w-12 h-12 bg-green-50 text-green-500 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                   <HeartHandshake className="h-6 w-6" />
@@ -153,8 +147,7 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow group">
-              <div className="h-2 bg-gradient-to-r from-purple-400 to-purple-600"></div>
+            <div className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow">
               <div className="p-6">
                 <div className="w-12 h-12 bg-purple-50 text-purple-500 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                   <Sparkles className="h-6 w-6" />
@@ -171,9 +164,9 @@ export default function HomePage() {
           </div>
 
           {/* 特徴セクション */}
-          <div className="mt-24 grid md:grid-cols-2 gap-16">
-            <div>
-              <h3 className="text-2xl font-bold mb-6 flex items-center">
+          <div className="mt-16 grid md:grid-cols-2 gap-10">
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h3 className="text-xl font-bold mb-6 flex items-center">
                 <Compass className="h-6 w-6 mr-3 text-primary" />
                 旅行者にとってのメリット
               </h3>
@@ -205,8 +198,8 @@ export default function HomePage() {
               </ul>
             </div>
 
-            <div>
-              <h3 className="text-2xl font-bold mb-6 flex items-center">
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h3 className="text-xl font-bold mb-6 flex items-center">
                 <Users className="h-6 w-6 mr-3 text-primary" />
                 クリエイターにとってのメリット
               </h3>
@@ -232,7 +225,7 @@ export default function HomePage() {
                     <span className="text-primary font-medium">3</span>
                   </span>
                   <p className="text-muted-foreground">
-                    PV数に応じた継続的な収入モデルを構築可能
+                    地域活性化に貢献しながら自分のスキルを活かせる
                   </p>
                 </li>
               </ul>

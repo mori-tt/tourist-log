@@ -29,7 +29,18 @@ import {
   DollarSign,
   Tag,
   TrendingUp,
+  Check,
+  Info,
 } from "lucide-react";
+
+// 取引履歴の型定義
+interface Transaction {
+  id: number;
+  type: "purchase" | "tip" | string;
+  amount: number;
+  timestamp: string;
+  transactionHash: string;
+}
 
 export default function ArticleDetailPage() {
   const { data: session, status } = useSession();
@@ -55,6 +66,64 @@ export default function ArticleDetailPage() {
   const article = articles.find((a) => a.id === articleId);
 
   const [authorName, setAuthorName] = useState<string>("");
+  const [totalReceivedXym, setTotalReceivedXym] = useState<number>(0);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+
+  // XYM取引履歴を取得する関数
+  const fetchTransactionHistory = React.useCallback(async () => {
+    if (!article) return;
+
+    try {
+      // API実装が完成するまでのダミーデータ
+      const dummyTransactions: Transaction[] = [
+        {
+          id: 1,
+          type: "purchase",
+          amount: article.xymPrice || 0,
+          timestamp: new Date().toISOString(),
+          transactionHash:
+            "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+        },
+        {
+          id: 2,
+          type: "tip",
+          amount: 5,
+          timestamp: new Date(Date.now() - 86400000).toISOString(), // 1日前
+          transactionHash:
+            "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+        },
+      ];
+
+      setTransactions(dummyTransactions);
+
+      // 合計XYMを計算
+      const totalXym = dummyTransactions.reduce(
+        (sum: number, tx: Transaction) => {
+          return sum + (tx.amount || 0);
+        },
+        0
+      );
+
+      setTotalReceivedXym(totalXym);
+
+      /* 本来のAPI呼び出し（APIが完成したら有効化）
+      const response = await fetch(`/api/transactions/history/${article.id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setTransactions(data.transactions || []);
+        
+        // 合計XYMを計算
+        const totalXym = data.transactions.reduce((sum: number, tx: Transaction) => {
+          return sum + (tx.amount || 0);
+        }, 0);
+        
+        setTotalReceivedXym(totalXym);
+      }
+      */
+    } catch (error) {
+      console.error("XYM取引履歴の取得に失敗しました:", error);
+    }
+  }, [article]);
 
   useEffect(() => {
     if (article) {
@@ -62,6 +131,11 @@ export default function ArticleDetailPage() {
       setValue("content", article.content);
       setValue("topicId", article.topicId);
       setValue("xymPrice", article.xymPrice);
+
+      // ユーザーが記事の投稿者である場合、XYM取引履歴を取得
+      if (session?.user?.id === article.userId) {
+        fetchTransactionHistory();
+      }
 
       // 画像URLの検証
       if (article.images) {
@@ -79,7 +153,7 @@ export default function ArticleDetailPage() {
         }
       }
     }
-  }, [article, setValue]);
+  }, [article, setValue, session, fetchTransactionHistory]);
 
   useEffect(() => {
     const fetchAuthorName = async () => {
@@ -286,18 +360,18 @@ export default function ArticleDetailPage() {
     );
   }
 
-  // 記事コンテンツの取得とアクセス制御
+  // 記事の内容を取得する関数
   const getArticleContent = () => {
-    // 未ログインの場合は未購入の記事のみ表示、購入済みは非表示
+    // 未ログインの場合
     if (!session) {
-      if (!article.isPurchased) {
-        return article.content;
-      } else {
-        return "この記事は購入後にご覧いただけます。";
+      // 購入済み記事は表示しない
+      if (article.isPurchased) {
+        return "この記事はログイン後に購入することで閲覧できます。";
       }
+      return article.content;
     }
 
-    // アクセス権の確認: 自分の記事、購入済み記事、管理者は全て閲覧可能
+    // アクセス権の確認: 自分の記事、購入済み記事を購入した人、管理者は閲覧可能
     if (
       article.userId === session.user.id ||
       article.purchasedBy === session.user.id ||
@@ -317,9 +391,30 @@ export default function ArticleDetailPage() {
   // 記事の関連トピック取得
   const relatedTopic = topics.find((t) => t.id === article.topicId);
 
-  // 編集権限の確認: 自分の記事または管理者のみ
-  const canEdit =
-    session && (article.userId === session.user.id || session.user.isAdmin);
+  // 購入要件のメッセージ表示
+  const hasAccess =
+    session &&
+    (article.userId === session.user.id ||
+      article.purchasedBy === session.user.id ||
+      session.user.isAdmin);
+
+  // 自分のトピックの記事かどうかをチェック（広告主用）
+  const isTopicOwner =
+    session?.user?.isAdvertiser &&
+    relatedTopic &&
+    relatedTopic.advertiserId === session.user.id;
+
+  // 記事購入ボタンを表示すべきかの条件
+  const shouldShowPurchaseButton =
+    session &&
+    article.isPurchased &&
+    !hasAccess &&
+    // 自分の記事ではない場合
+    (session.user.id !== article.userId ||
+      // または広告主で自分のトピックの記事の場合
+      (session.user?.isAdvertiser &&
+        relatedTopic &&
+        relatedTopic.advertiserId === session.user.id));
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-5xl">
@@ -364,7 +459,7 @@ export default function ArticleDetailPage() {
 
         <div className="p-6 sm:p-8">
           {/* 購入要件のメッセージ表示 */}
-          {article.isPurchased && !article.purchasedBy && !canEdit && (
+          {article.isPurchased && !hasAccess && (
             <div className="bg-primary/5 border border-primary/10 rounded-lg p-4 mb-6">
               <div className="flex items-start">
                 <DollarSign className="h-5 w-5 text-primary mt-0.5 mr-3 flex-shrink-0" />
@@ -387,6 +482,21 @@ export default function ArticleDetailPage() {
                       <Button variant="outline">ログインして購入</Button>
                     </Link>
                   )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 購入済みメッセージ表示 */}
+          {article.isPurchased && article.purchasedBy === session?.user?.id && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+              <div className="flex items-start">
+                <Check className="h-5 w-5 text-green-600 mt-0.5 mr-3 flex-shrink-0" />
+                <div>
+                  <h3 className="font-medium mb-1">購入済み記事</h3>
+                  <p className="text-sm text-muted-foreground">
+                    あなたはこの記事を購入済みです。全文をお読みいただけます。
+                  </p>
                 </div>
               </div>
             </div>
@@ -423,9 +533,10 @@ export default function ArticleDetailPage() {
 
           {/* 記事のアクション */}
           <div className="flex flex-wrap gap-4 mt-8">
-            {/* 広告主のみ表示する投げ銭ボタン */}
+            {/* 投げ銭ボタン - 広告主のみ表示、かつ自分の記事ではなく、購入済みでない場合に表示 */}
             {session?.user?.isAdvertiser &&
-              session.user.id !== article.userId && (
+              session.user.id !== article.userId &&
+              !article.isPurchased && (
                 <Button
                   onClick={handleTip}
                   className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
@@ -435,16 +546,33 @@ export default function ArticleDetailPage() {
                 </Button>
               )}
 
-            {/* 広告主のみ表示する記事購入ボタン */}
-            {session?.user?.isAdvertiser &&
-              session.user.id !== article.userId && (
-                <Button
-                  onClick={handlePurchase}
-                  className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700"
-                >
-                  <DollarSign className="h-4 w-4" />
-                  記事を購入 ({article.xymPrice} XYM)
-                </Button>
+            {/* 記事購入ボタン - 購入していない記事の場合で自分の記事ではない場合、または自分のトピックの記事の場合に表示 */}
+            {shouldShowPurchaseButton && (
+              <Button
+                onClick={handlePurchase}
+                className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700"
+              >
+                <DollarSign className="h-4 w-4" />
+                記事を購入 ({article.xymPrice} XYM)
+              </Button>
+            )}
+
+            {/* 記事の状態を表示 - 自分の記事かどうか */}
+            {session?.user?.id === article.userId && (
+              <div className="flex items-center gap-2 text-sm bg-green-50 text-green-700 border border-green-200 rounded-md px-3 py-2">
+                <Info className="h-4 w-4" />
+                <span>あなたが投稿した記事です</span>
+              </div>
+            )}
+
+            {/* 記事の状態を表示 - 自分の記事が購入されたかどうか */}
+            {session?.user?.id === article.userId &&
+              article.isPurchased &&
+              article.purchasedBy && (
+                <div className="flex items-center gap-2 text-sm bg-purple-50 text-purple-700 border border-purple-200 rounded-md px-3 py-2">
+                  <Check className="h-4 w-4" />
+                  <span>この記事は購入されています</span>
+                </div>
               )}
 
             {/* PVによる広告料の表示 - 広告主向け情報 */}
@@ -454,21 +582,38 @@ export default function ArticleDetailPage() {
                 <span>PV: {article.views || 0}</span>
                 <span className="mx-1">|</span>
                 <span>
-                  推定広告料: {Math.floor((article.views || 0) * 0.01)} XYM
+                  支払い予定広告料: {Math.floor((article.views || 0) * 0.01)}{" "}
+                  XYM
                 </span>
+              </div>
+            )}
+
+            {/* 広告主で自分のトピックの記事の場合に表示 */}
+            {isTopicOwner && (
+              <div className="flex items-center gap-2 text-sm bg-blue-50 text-blue-700 border border-blue-200 rounded-md px-3 py-2">
+                <Info className="h-4 w-4" />
+                <span>あなたのトピックに基づく記事です</span>
               </div>
             )}
 
             {/* 記事所有者に広告収益情報を表示 */}
             {session?.user?.id === article.userId && (
-              <div className="flex items-center gap-2 text-sm bg-blue-50 text-blue-700 border border-blue-200 rounded-md px-3 py-2">
-                <TrendingUp className="h-4 w-4" />
-                <span>PV: {article.views || 0}</span>
-                <span className="mx-1">|</span>
-                <span>
-                  広告収益: {Math.floor((article.views || 0) * 0.01)} XYM
-                </span>
-              </div>
+              <>
+                <div className="flex items-center gap-2 text-sm bg-blue-50 text-blue-700 border border-blue-200 rounded-md px-3 py-2">
+                  <TrendingUp className="h-4 w-4" />
+                  <span>PV: {article.views || 0}</span>
+                  <span className="mx-1">|</span>
+                  <span>
+                    広告収益: {Math.floor((article.views || 0) * 0.01)} XYM
+                  </span>
+                </div>
+
+                {/* XYM収入の合計を表示 */}
+                <div className="flex items-center gap-2 text-sm bg-purple-50 text-purple-700 border border-purple-200 rounded-md px-3 py-2">
+                  <DollarSign className="h-4 w-4" />
+                  <span>合計受取XYM: {totalReceivedXym} XYM</span>
+                </div>
+              </>
             )}
 
             {/* 投稿者にだけ編集削除を表示 */}
@@ -528,6 +673,58 @@ export default function ArticleDetailPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* トランザクション履歴カード - 記事所有者にのみ表示 */}
+      {session?.user?.id === article.userId && transactions.length > 0 && (
+        <Card className="bg-card shadow-sm rounded-xl overflow-hidden mb-8">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center">
+              <DollarSign className="h-5 w-5 mr-2" />
+              XYM取引履歴
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {transactions.map((tx, index) => (
+                <div
+                  key={index}
+                  className="p-3 border rounded-lg flex items-center justify-between"
+                >
+                  <div>
+                    <p className="font-medium">
+                      {tx.type === "tip"
+                        ? "投げ銭"
+                        : tx.type === "purchase"
+                        ? "記事購入"
+                        : "その他"}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(tx.timestamp).toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium text-green-600">
+                      +{tx.amount} XYM
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate max-w-[200px]">
+                      {tx.transactionHash}
+                    </p>
+                  </div>
+                </div>
+              ))}
+
+              <div className="mt-4 p-3 bg-green-50 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <p className="font-medium">合計受取XYM</p>
+                  <p className="font-bold text-green-600">
+                    {totalReceivedXym} XYM
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* 投げ銭ダイアログ */}
       <Dialog open={tipDialogOpen} onOpenChange={setTipDialogOpen}>

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, FormEvent } from "react";
 import Link from "next/link";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { Menu, X, Search, Globe } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,8 @@ export default function Header() {
   const [searchTerm, setSearchTerm] = useState("");
   const pathname = usePathname();
   const router = useRouter();
+  const status = useSession().status;
+  const session = useSession().data;
 
   // スクロール時のヘッダー変化を処理
   useEffect(() => {
@@ -125,7 +127,7 @@ export default function Header() {
               </div>
             </form>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 gap-2">
               <Link
                 href="/"
                 onClick={() => setIsOpen(false)}
@@ -162,30 +164,82 @@ export default function Header() {
               >
                 サイトについて
               </Link>
-              <Link
-                href="/login"
-                onClick={() => setIsOpen(false)}
-                className={cn(
-                  "block px-3 py-2 rounded-md text-base font-medium text-center",
-                  pathname === "/login"
-                    ? "bg-primary/10 text-primary"
-                    : "text-gray-700 hover:bg-gray-100"
-                )}
-              >
-                ログイン
-              </Link>
-              <Link
-                href="/signin"
-                onClick={() => setIsOpen(false)}
-                className={cn(
-                  "block px-3 py-2 rounded-md text-base font-medium text-center",
-                  pathname === "/signin"
-                    ? "bg-primary/10 text-primary"
-                    : "text-gray-700 hover:bg-gray-100"
-                )}
-              >
-                新規登録
-              </Link>
+
+              {!status || status === "unauthenticated" ? (
+                <>
+                  <Link
+                    href="/login"
+                    onClick={() => setIsOpen(false)}
+                    className={cn(
+                      "block px-3 py-2 rounded-md text-base font-medium text-center",
+                      pathname === "/login"
+                        ? "bg-primary/10 text-primary"
+                        : "text-gray-700 hover:bg-gray-100"
+                    )}
+                  >
+                    ログイン
+                  </Link>
+                  <Link
+                    href="/signin"
+                    onClick={() => setIsOpen(false)}
+                    className={cn(
+                      "block px-3 py-2 mt-2 rounded-md text-base font-medium text-center bg-primary text-white hover:bg-primary/90"
+                    )}
+                  >
+                    新規登録
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/profile"
+                    onClick={() => setIsOpen(false)}
+                    className={cn(
+                      "block px-3 py-2 rounded-md text-base font-medium text-center",
+                      pathname === "/profile"
+                        ? "bg-primary/10 text-primary"
+                        : "text-gray-700 hover:bg-gray-100"
+                    )}
+                  >
+                    プロフィール
+                  </Link>
+                  <Link
+                    href="/dashboard"
+                    onClick={() => setIsOpen(false)}
+                    className={cn(
+                      "block px-3 py-2 rounded-md text-base font-medium text-center",
+                      pathname === "/dashboard"
+                        ? "bg-primary/10 text-primary"
+                        : "text-gray-700 hover:bg-gray-100"
+                    )}
+                  >
+                    ダッシュボード
+                  </Link>
+                  {status === "authenticated" && session?.user?.isAdmin && (
+                    <Link
+                      href="/admin/users"
+                      onClick={() => setIsOpen(false)}
+                      className={cn(
+                        "block px-3 py-2 rounded-md text-base font-medium text-center",
+                        pathname === "/admin/users"
+                          ? "bg-primary/10 text-primary"
+                          : "text-gray-700 hover:bg-gray-100"
+                      )}
+                    >
+                      ユーザー管理
+                    </Link>
+                  )}
+                  <button
+                    onClick={() => {
+                      signOut();
+                      setIsOpen(false);
+                    }}
+                    className="w-full px-3 py-2 mt-2 rounded-md text-base font-medium text-center text-gray-700 hover:bg-gray-100"
+                  >
+                    ログアウト
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>

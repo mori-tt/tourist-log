@@ -58,7 +58,7 @@ export default function TopicEditPage() {
     if (res.ok) {
       const updatedTopic = await res.json();
       updateTopic(updatedTopic);
-      router.push("/");
+      router.push(`/topics/${topicId}`);
     } else {
       console.error("トピック更新に失敗しました");
     }
@@ -69,7 +69,7 @@ export default function TopicEditPage() {
       method: "DELETE",
     });
     if (res.ok) {
-      router.push("/");
+      router.push("/topics");
     } else {
       console.error("トピック削除に失敗しました");
     }
@@ -148,7 +148,7 @@ export default function TopicEditPage() {
                 </Button>
               )}
             </div>
-            <Link href="/">
+            <Link href={`/topics/${topicId}`}>
               <Button variant="outline">戻る</Button>
             </Link>
           </form>
