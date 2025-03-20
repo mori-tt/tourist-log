@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { Globe, Instagram, ChevronUp } from "lucide-react";
+import { Instagram, ChevronUp, Compass } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 // 日本の地方と都道府県コードを定義
@@ -127,9 +127,11 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* サイト情報 */}
           <div className="md:col-span-1">
-            <Link href="/" className="flex items-center space-x-2 mb-4">
-              <Globe className="h-6 w-6 text-primary" />
-              <span className="font-bold text-xl text-primary">TouristLog</span>
+            <Link href="/" className="flex items-center space-x-2">
+              <Compass className="h-6 w-6 text-blue-400" />
+              <span className="font-bold text-xl text-primary">
+                Tourist<span className="text-blue-400">Log</span>
+              </span>
             </Link>
             <p className="text-sm text-gray-600 mb-4">
               日本の地方や都道府県に関する情報や記事を提供するプラットフォームです。

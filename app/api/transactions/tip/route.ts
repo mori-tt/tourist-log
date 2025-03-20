@@ -23,8 +23,15 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const data = await req.json();
-    const { senderWalletPrivateKey, recipientAddress, tipAmount, topicId } =
-      data;
+    const {
+      senderWalletPrivateKey,
+      recipientAddress,
+      tipAmount,
+      topicId,
+      articleId,
+      senderId,
+      recipientId,
+    } = data;
 
     // 金額が0以下の場合はエラー
     if (tipAmount <= 0) {
@@ -41,19 +48,52 @@ export async function POST(req: Request) {
       tipAmount
     );
 
-    // DBに取引履歴を記録（金額情報も含める）
-    const transactionRecord = await prisma.transaction.create({
+    // 送信者側のメタデータ
+    const senderMetadata = JSON.stringify({
+      articleId: articleId,
+      tipAmount,
+      recipientId,
+    });
+
+    // 送信者側のトランザクション記録
+    const senderTransaction = await prisma.transaction.create({
       data: {
         topicId: topicId,
         adFee: 0, // Tipの場合は広告料は0
         xymAmount: parseFloat(tipAmount), // XYM単位の金額
         transactionHash: transactionResponse.transactionInfo.hash,
         type: TransactionType.tip,
+        userId: senderId,
+        articleId: articleId,
+        metadata: senderMetadata,
+      },
+    });
+
+    // 受信者側のメタデータ
+    const recipientMetadata = JSON.stringify({
+      articleId: articleId,
+      tipAmount,
+      senderId,
+    });
+
+    // 受信者側のトランザクション記録
+    const recipientTransaction = await prisma.transaction.create({
+      data: {
+        topicId: topicId,
+        adFee: 0,
+        xymAmount: parseFloat(tipAmount),
+        transactionHash: transactionResponse.transactionInfo.hash,
+        type: TransactionType.receive_tip,
+        userId: recipientId,
+        articleId: articleId,
+        metadata: recipientMetadata,
+        isReceived: true,
       },
     });
 
     return NextResponse.json({
-      transaction: transactionRecord,
+      senderTransaction,
+      recipientTransaction,
       blockchain: transactionResponse,
     });
   } catch (error) {

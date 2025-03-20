@@ -278,33 +278,6 @@ export default function PrefecturePage() {
                 </div>
               </div>
             </div>
-            <div className="flex flex-col sm:flex-row gap-2">
-              {/* 管理者専用ボタン */}
-              {userRole.isAdmin && (
-                <Button
-                  className="bg-red-500/90 text-white hover:bg-red-600"
-                  onClick={() =>
-                    (window.location.href = `/admin/prefecture/${prefectureCode}`)
-                  }
-                >
-                  <Shield className="h-4 w-4 mr-2" />
-                  管理画面
-                </Button>
-              )}
-              <Button
-                className="bg-white/90 text-gray-900 hover:bg-white"
-                onClick={() => {
-                  // windowオブジェクトの存在を確認してからスクロール処理を実行
-                  if (typeof window !== "undefined") {
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                    console.log("スクロールしました");
-                  }
-                }}
-                id="back-to-top-button"
-              >
-                トップへ戻る
-              </Button>
-            </div>
           </div>
         </div>
 

@@ -84,8 +84,8 @@ export async function POST(req: Request) {
       purchaserId: advertiserId,
     });
 
-    // DBに取引情報を記録（購入時は tipAmount フィールドを購入額として利用）
-    const transactionRecord = await prisma.transaction.create({
+    // 購入者用のトランザクション記録
+    const purchaseTransaction = await prisma.transaction.create({
       data: {
         topicId: Number(article.topicId),
         adFee: purchaseAmount,
@@ -98,9 +98,32 @@ export async function POST(req: Request) {
       },
     });
 
+    // 記事投稿者用のトランザクション記録 (receive_tip タイプ)
+    const receiverMetadata = JSON.stringify({
+      articleId: Number(articleId),
+      purchaseAmount,
+      purchaserId: advertiserId,
+      receiverId: article.userId,
+    });
+
+    const receiveTransaction = await prisma.transaction.create({
+      data: {
+        topicId: Number(article.topicId),
+        adFee: purchaseAmount,
+        xymAmount: purchaseAmount,
+        transactionHash: transactionResponse.transactionInfo.hash,
+        type: "receive_tip",
+        userId: article.userId, // 投稿者のID
+        articleId: Number(articleId),
+        metadata: receiverMetadata,
+        isReceived: true,
+      },
+    });
+
     return NextResponse.json({
       updatedArticle,
-      transaction: transactionRecord,
+      purchaseTransaction,
+      receiveTransaction,
       blockchain: transactionResponse,
     });
   } catch (error) {

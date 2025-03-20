@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { redirect } from "next/navigation";
 import { User, Calendar, Globe, BookOpen, FileText } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useTopics } from "@/context/TopicsContext";
@@ -151,25 +150,6 @@ export default function ProfilePage() {
                 </div>
 
                 <Separator />
-
-                <div>
-                  <h3 className="font-medium mb-4">アカウント設定</h3>
-                  <div className="space-y-3">
-                    <Button variant="outline" className="w-full sm:w-auto">
-                      プロフィールを編集
-                    </Button>
-                    <Button variant="outline" className="w-full sm:w-auto">
-                      パスワードを変更
-                    </Button>
-                    {userInfo.isAdmin && (
-                      <Link href="/admin">
-                        <Button variant="outline" className="w-full sm:w-auto">
-                          管理者ページ
-                        </Button>
-                      </Link>
-                    )}
-                  </div>
-                </div>
               </div>
             </CardContent>
           </Card>

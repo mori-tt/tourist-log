@@ -58,7 +58,7 @@ export default function TopicPage() {
     fetchAdvertiserName();
   }, [topic]);
 
-  // 関連記事を取得
+  // 記事を取得
   useEffect(() => {
     if (topic) {
       const filtered = articles.filter(
@@ -198,9 +198,9 @@ export default function TopicPage() {
             <div className="flex items-center bg-muted/50 p-4 rounded-lg">
               <Globe className="h-5 w-5 text-primary mr-3" />
               <div>
-                <p className="text-xs text-muted-foreground">作成日</p>
+                <p className="text-xs text-muted-foreground">更新日</p>
                 <p className="font-medium">
-                  {new Date().toLocaleDateString("ja-JP")}
+                  {new Date(topic.updatedAt).toLocaleDateString("ja-JP")}
                 </p>
               </div>
             </div>
@@ -232,7 +232,8 @@ export default function TopicPage() {
         </CardContent>
       </Card>
 
-      {/* 関連記事セクション */}
+      {/* 記事セクション */}
+
       <Card className="bg-card shadow-sm rounded-xl overflow-hidden">
         <div className="bg-gradient-to-r from-primary/10 to-primary/5 p-6 border-b">
           <h2 className="text-xl font-bold flex items-center">
@@ -246,6 +247,14 @@ export default function TopicPage() {
               {relatedArticles.map((article) => {
                 const authorName =
                   authorNames[article.userId] || "不明なユーザー";
+                // Determine if the article can be viewed
+                const canView = article.isPurchased
+                  ? session?.user?.isAdmin ||
+                    session?.user?.id === topic?.advertiserId ||
+                    session?.user?.id === article.userId
+                  : true;
+                if (!canView) return null;
+
                 return (
                   <div
                     key={article.id}
@@ -273,38 +282,76 @@ export default function TopicPage() {
                       </p>
                     </Link>
 
-                    {/* 管理者に記事削除ボタンを表示 */}
-                    {session?.user?.isAdmin && (
-                      <div className="mt-3 flex justify-end">
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          className="flex items-center"
-                          onClick={async (e) => {
-                            e.preventDefault();
-                            if (
-                              confirm("この記事を削除してもよろしいですか？")
-                            ) {
-                              const res = await fetch(
-                                `/api/articles/${article.id}`,
-                                {
-                                  method: "DELETE",
+                    {/* Delete button conditions */}
+                    {article.isPurchased
+                      ? (session?.user?.isAdmin ||
+                          session?.user?.id === article.purchasedBy) && (
+                          <div className="mt-3 flex justify-end">
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="flex items-center"
+                              onClick={async (e) => {
+                                e.preventDefault();
+                                if (
+                                  confirm(
+                                    "この記事を削除してもよろしいですか？"
+                                  )
+                                ) {
+                                  const res = await fetch(
+                                    `/api/articles/${article.id}`,
+                                    {
+                                      method: "DELETE",
+                                    }
+                                  );
+                                  if (res.ok) {
+                                    alert("記事が削除されました");
+                                    router.refresh();
+                                  } else {
+                                    alert("記事の削除に失敗しました");
+                                  }
                                 }
-                              );
-                              if (res.ok) {
-                                alert("記事が削除されました");
-                                router.refresh();
-                              } else {
-                                alert("記事の削除に失敗しました");
-                              }
-                            }
-                          }}
-                        >
-                          <Trash className="h-3 w-3 mr-1" />
-                          削除
-                        </Button>
-                      </div>
-                    )}
+                              }}
+                            >
+                              <Trash className="h-3 w-3 mr-1" />
+                              削除
+                            </Button>
+                          </div>
+                        )
+                      : (session?.user?.isAdmin ||
+                          session?.user?.id === topic?.advertiserId) && (
+                          <div className="mt-3 flex justify-end">
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="flex items-center"
+                              onClick={async (e) => {
+                                e.preventDefault();
+                                if (
+                                  confirm(
+                                    "この記事を削除してもよろしいですか？"
+                                  )
+                                ) {
+                                  const res = await fetch(
+                                    `/api/articles/${article.id}`,
+                                    {
+                                      method: "DELETE",
+                                    }
+                                  );
+                                  if (res.ok) {
+                                    alert("記事が削除されました");
+                                    router.refresh();
+                                  } else {
+                                    alert("記事の削除に失敗しました");
+                                  }
+                                }
+                              }}
+                            >
+                              <Trash className="h-3 w-3 mr-1" />
+                              削除
+                            </Button>
+                          </div>
+                        )}
                   </div>
                 );
               })}

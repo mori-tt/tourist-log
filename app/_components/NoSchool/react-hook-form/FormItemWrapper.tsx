@@ -19,7 +19,6 @@ export const FormItemWrapper = <
   const { errors } = useFormState({
     control,
   });
-
   const error = errors[name];
 
   return (

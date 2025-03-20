@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useArticles } from "@/context/ArticlesContext";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useSession, signIn } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useTopics } from "@/context/TopicsContext";
 import { useForm } from "react-hook-form";
@@ -259,6 +259,9 @@ export default function ArticleDetailPage() {
           recipientAddress: article?.user?.walletAddress,
           tipAmount,
           topicId: article?.topicId,
+          articleId: article?.id,
+          senderId: session?.user?.id,
+          recipientId: article?.userId,
         }),
       });
 
@@ -387,6 +390,7 @@ export default function ArticleDetailPage() {
     relatedTopic.advertiserId === session.user.id;
 
   // 購入済み記事へのアクセス権をチェックする関数
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const checkArticleAccess = React.useCallback(() => {
     if (!article || !article.isPurchased) {
       // 購入されていない記事は誰でも閲覧可能
@@ -410,95 +414,6 @@ export default function ArticleDetailPage() {
       session.user.isAdvertiser
     );
   }, [article, session, status]);
-
-  // 購入済み記事へのアクセス権がない場合の表示
-  if (article?.isPurchased && !checkArticleAccess()) {
-    return (
-      <div className="container mx-auto py-8 px-4">
-        <Card className="max-w-4xl mx-auto">
-          <CardHeader>
-            <Button
-              variant="ghost"
-              onClick={() => router.back()}
-              className="mb-4 -ml-4"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              戻る
-            </Button>
-            <CardTitle className="text-2xl">{article.title}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="bg-amber-50 p-4 rounded-lg mb-6">
-              <div className="flex items-start space-x-3">
-                <Info className="h-5 w-5 text-amber-600 mt-0.5" />
-                <div>
-                  <h3 className="font-medium text-amber-800">
-                    この記事は購入済みコンテンツです
-                  </h3>
-                  <p className="text-amber-700 mt-1">
-                    このコンテンツを閲覧するには、ログインして記事を購入する必要があります。
-                  </p>
-                  <div className="mt-4">
-                    {status !== "authenticated" ? (
-                      <Button
-                        onClick={() => signIn()}
-                        className="bg-amber-600 hover:bg-amber-700"
-                      >
-                        ログインして続ける
-                      </Button>
-                    ) : (
-                      <Button
-                        onClick={() => handlePurchase()}
-                        disabled={isPurchaseSubmitting}
-                        className="bg-amber-600 hover:bg-amber-700"
-                      >
-                        {isPurchaseSubmitting ? (
-                          <>
-                            <span className="animate-spin mr-2">⏳</span>
-                            処理中...
-                          </>
-                        ) : (
-                          <>
-                            <DollarSign className="h-4 w-4 mr-2" />
-                            {article.xymPrice || 0} XYMで購入する
-                          </>
-                        )}
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                <User className="h-4 w-4" />
-                <span>投稿者: {article.user?.name || "不明なユーザー"}</span>
-                <span className="mx-1">•</span>
-                <Calendar className="h-4 w-4" />
-                <span>
-                  投稿日:{" "}
-                  {new Date(article.createdAt).toLocaleDateString("ja-JP")}
-                </span>
-              </div>
-
-              <p className="text-muted-foreground italic">
-                ※ 本文はログインして記事を購入すると表示されます
-              </p>
-
-              {/* プレビュー用の短い抜粋 */}
-              <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                <h3 className="font-medium mb-2">記事プレビュー</h3>
-                <p className="line-clamp-3">
-                  {article.content.substring(0, 150)}...
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   // 記事が見つからない場合
   if (!article) {
@@ -566,7 +481,7 @@ export default function ArticleDetailPage() {
 
         <div className="p-6 sm:p-8">
           {/* 購入要件のメッセージ表示 - ログインユーザーのみ */}
-          {article.isPurchased && !checkArticleAccess() && session && (
+          {/* {article.isPurchased && !checkArticleAccess() && session && (
             <div className="bg-primary/5 border border-primary/10 rounded-lg p-4 mb-6">
               <div className="flex items-start">
                 <DollarSign className="h-5 w-5 text-primary mt-0.5 mr-3 flex-shrink-0" />
@@ -586,10 +501,10 @@ export default function ArticleDetailPage() {
                 </div>
               </div>
             </div>
-          )}
+          )} */}
 
           {/* 未ログインユーザーへのメッセージ */}
-          {article.isPurchased && !checkArticleAccess() && !session && (
+          {/* {article.isPurchased && !checkArticleAccess() && !session && (
             <div className="bg-primary/5 border border-primary/10 rounded-lg p-4 mb-6">
               <div className="flex items-start">
                 <DollarSign className="h-5 w-5 text-primary mt-0.5 mr-3 flex-shrink-0" />
@@ -604,7 +519,7 @@ export default function ArticleDetailPage() {
                 </div>
               </div>
             </div>
-          )}
+          )} */}
 
           {/* 記事コンテンツ */}
           <div className="prose prose-sm sm:prose max-w-none">
@@ -666,8 +581,8 @@ export default function ArticleDetailPage() {
                 </Button>
               )}
 
-            {/* 記事購入ボタン - 購入していない記事の場合で自分の記事ではない場合、または自分のトピックの記事の場合に表示 */}
-            {checkArticleAccess() && (
+            {/* 記事購入ボタン - トピックを立てた広告主のトピックの記事の場合に表示 */}
+            {isTopicOwner && !article.isPurchased && (
               <Button
                 onClick={handlePurchase}
                 className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700"
@@ -695,18 +610,15 @@ export default function ArticleDetailPage() {
                 </div>
               )}
 
-            {/* PVによる広告料の表示 - 広告主向け情報 */}
-            {session?.user?.isAdvertiser && (
-              <div className="flex items-center gap-2 text-sm text-gray-600 border border-gray-200 rounded-md px-3 py-2">
-                <TrendingUp className="h-4 w-4" />
-                <span>PV: {article.views || 0}</span>
-                <span className="mx-1">|</span>
-                <span>
-                  支払い予定広告料: {Math.floor((article.views || 0) * 0.01)}{" "}
-                  XYM
-                </span>
-              </div>
-            )}
+            {/* PVによる広告料の表示 - */}
+            <div className="flex items-center gap-2 text-sm text-gray-600 border border-gray-200 rounded-md px-3 py-2">
+              <TrendingUp className="h-4 w-4" />
+              <span>PV: {article.views || 0}</span>
+              <span className="mx-1">|</span>
+              <span>
+                広告料/月: {Math.floor((article.views || 0) * 0.01)} XYM
+              </span>
+            </div>
 
             {/* 広告主で自分のトピックの記事の場合に表示 */}
             {isTopicOwner && (
@@ -757,12 +669,12 @@ export default function ArticleDetailPage() {
             )}
 
             {/* 記事が購入済みの場合に投稿者に表示するメッセージ */}
-            {session?.user?.id === article.userId && article.isPurchased && (
+            {/* {session?.user?.id === article.userId && article.isPurchased && (
               <div className="flex items-center gap-2 text-sm bg-amber-50 text-amber-700 border border-amber-200 rounded-md px-3 py-2">
                 <Info className="h-4 w-4" />
                 <span>この記事は購入済みのため編集・削除できません</span>
               </div>
-            )}
+            )} */}
 
             {/* 管理者に削除ボタンを表示 */}
             {session?.user?.isAdmin && session?.user?.id !== article.userId && (
@@ -772,7 +684,7 @@ export default function ArticleDetailPage() {
                 className="flex items-center gap-2"
               >
                 <Trash className="h-4 w-4" />
-                削除（管理者）
+                削除
               </Button>
             )}
 

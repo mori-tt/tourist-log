@@ -14,7 +14,6 @@ export default function TopicsPage() {
 
   if (status === "loading") return <p>Loading...</p>;
   if (!session) {
-    // ログインしていなくても閲覧可能に変更
     return (
       <div className="container mx-auto py-8 px-4 max-w-5xl">
         <div className="mb-8">

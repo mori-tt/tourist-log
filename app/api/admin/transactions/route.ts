@@ -98,7 +98,7 @@ export async function GET() {
         : null,
     }));
 
-    return NextResponse.json(transactionsWithDetails);
+    return NextResponse.json({ transactions: transactionsWithDetails });
   } catch (error) {
     console.error("トランザクション履歴の取得に失敗しました:", error);
     return NextResponse.json(

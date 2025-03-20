@@ -5,4 +5,6 @@ export interface Topic {
   adFee: number;
   monthlyPVThreshold: number;
   advertiserId: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
