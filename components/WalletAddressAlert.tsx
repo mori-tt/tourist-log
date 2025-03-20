@@ -7,7 +7,13 @@ import { AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
-export default function WalletAddressAlert() {
+interface WalletAddressAlertProps {
+  className?: string;
+}
+
+export default function WalletAddressAlert({
+  className = "mb-4",
+}: WalletAddressAlertProps) {
   const { data: session } = useSession();
   const [hasWalletAddress, setHasWalletAddress] = useState<boolean | null>(
     null
@@ -47,7 +53,7 @@ export default function WalletAddressAlert() {
   }
 
   return (
-    <Alert variant="destructive" className="mb-4">
+    <Alert variant="destructive" className={className}>
       <AlertCircle className="h-4 w-4" />
       <AlertTitle>ウォレットアドレスが設定されていません</AlertTitle>
       <AlertDescription>

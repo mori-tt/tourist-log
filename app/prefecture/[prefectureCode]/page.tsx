@@ -10,7 +10,19 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import ReactMarkdown from "react-markdown";
 import { getPrefectureByCode } from "@/lib/data/prefectures";
-import { MapPin, Info, Calendar, Star, Users, TrendingUp } from "lucide-react";
+import {
+  MapPin,
+  Info,
+  Calendar,
+  Star,
+  Users,
+  TrendingUp,
+  Edit,
+  Shield,
+  Gift,
+  CreditCard,
+  Eye,
+} from "lucide-react";
 
 // PrefectureCardから絵文字と背景色の取得関数をインポート
 // 都道府県ごとに異なる背景色と絵文字を設定
@@ -103,6 +115,20 @@ function getPrefectureRegion(code: string): string {
   return prefectureObj?.region || "";
 }
 
+// ユーザーロールの判定を明確にするためのカスタムフック
+function useUserRole() {
+  const { data: session } = useSession();
+
+  return {
+    isLoggedIn: !!session?.user,
+    isAdmin: !!session?.user?.isAdmin,
+    isAdvertiser: !!session?.user?.isAdvertiser,
+    isCreator:
+      !!session?.user && !session.user.isAdmin && !session.user.isAdvertiser,
+    userId: session?.user?.id,
+  };
+}
+
 export default function PrefecturePage() {
   const params = useParams();
   const prefectureCode = params.prefectureCode as string;
@@ -115,6 +141,15 @@ export default function PrefecturePage() {
   const [advertiserNames, setAdvertiserNames] = useState<{
     [key: string]: string;
   }>({});
+  // PV統計の状態を追加
+  const [articleViews, setArticleViews] = useState<{ [key: number]: number }>(
+    {}
+  );
+  // 投げ銭トータルの状態を追加
+  const [articleTips, setArticleTips] = useState<{ [key: number]: number }>({});
+
+  // ユーザーロールを取得
+  const userRole = useUserRole();
 
   // ユーザー名を非同期に取得する関数
   const fetchUserName = async (userId: string) => {
@@ -128,6 +163,40 @@ export default function PrefecturePage() {
       console.error("ユーザー名の取得に失敗しました:", error);
     }
     return "不明なユーザー";
+  };
+
+  // 記事のPV数を取得する関数
+  const fetchArticleViews = async () => {
+    try {
+      const res = await fetch("/api/pageviews/articles");
+      if (res.ok) {
+        const data = await res.json();
+        const viewsMap: { [key: number]: number } = {};
+        data.forEach((item: { articleId: number; views: number }) => {
+          viewsMap[item.articleId] = item.views;
+        });
+        setArticleViews(viewsMap);
+      }
+    } catch (error) {
+      console.error("PV数の取得に失敗しました:", error);
+    }
+  };
+
+  // 記事の投げ銭合計を取得する関数
+  const fetchArticleTips = async () => {
+    try {
+      const res = await fetch("/api/tips/summary");
+      if (res.ok) {
+        const data = await res.json();
+        const tipsMap: { [key: number]: number } = {};
+        data.forEach((item: { articleId: number; totalTips: number }) => {
+          tipsMap[item.articleId] = item.totalTips;
+        });
+        setArticleTips(tipsMap);
+      }
+    } catch (error) {
+      console.error("投げ銭情報の取得に失敗しました:", error);
+    }
   };
 
   // 記事の著者名とトピックの広告主名を取得
@@ -154,13 +223,12 @@ export default function PrefecturePage() {
 
     getAuthorNames();
     getAdvertiserNames();
+    fetchArticleViews();
+    fetchArticleTips();
   }, [articles, topics]);
 
   if (status === "loading") return <p>Loading...</p>;
   if (!prefecture) return <p>都道府県が見つかりません</p>;
-
-  // ログイン状態に応じた表示内容調整
-  const isAdmin = session?.user?.isAdmin;
 
   // この都道府県に関連するトピックをフィルタリング
   const filteredTopics = topics.filter((topic) => {
@@ -210,7 +278,19 @@ export default function PrefecturePage() {
                 </div>
               </div>
             </div>
-            <div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              {/* 管理者専用ボタン */}
+              {userRole.isAdmin && (
+                <Button
+                  className="bg-red-500/90 text-white hover:bg-red-600"
+                  onClick={() =>
+                    (window.location.href = `/admin/prefecture/${prefectureCode}`)
+                  }
+                >
+                  <Shield className="h-4 w-4 mr-2" />
+                  管理画面
+                </Button>
+              )}
               <Button
                 className="bg-white/90 text-gray-900 hover:bg-white"
                 onClick={() => {
@@ -227,6 +307,33 @@ export default function PrefecturePage() {
             </div>
           </div>
         </div>
+
+        {/* ユーザーロールアイコンパネル - ユーザータイプ別に表示機能を視覚化 */}
+        {userRole.isLoggedIn && (
+          <div className="px-4 py-2 bg-white rounded-lg shadow-sm mb-4 border-l-4 border-primary">
+            <div className="flex items-center gap-2 text-sm">
+              <span className="font-semibold">あなたは:</span>
+              {userRole.isAdmin && (
+                <div className="flex items-center px-2 py-1 bg-red-100 text-red-700 rounded">
+                  <Shield className="h-3 w-3 mr-1" />
+                  <span>管理者</span>
+                </div>
+              )}
+              {userRole.isAdvertiser && (
+                <div className="flex items-center px-2 py-1 bg-purple-100 text-purple-700 rounded">
+                  <CreditCard className="h-3 w-3 mr-1" />
+                  <span>広告主</span>
+                </div>
+              )}
+              {userRole.isCreator && (
+                <div className="flex items-center px-2 py-1 bg-green-100 text-green-700 rounded">
+                  <Edit className="h-3 w-3 mr-1" />
+                  <span>クリエイター</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* AirBnb風の特徴アイコン */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-2 py-4 bg-white rounded-lg shadow-sm mb-6">
@@ -256,7 +363,7 @@ export default function PrefecturePage() {
             {prefecture.name}のトピック一覧
           </h2>
           <div className="ml-auto">
-            {session?.user?.isAdvertiser && (
+            {userRole.isAdvertiser && (
               <Link href="/topics/new">
                 <Button variant="outline" size="sm">
                   <Info className="h-4 w-4 mr-1" />
@@ -273,7 +380,7 @@ export default function PrefecturePage() {
             <p className="text-xl text-muted-foreground mb-4">
               まだトピックはありません
             </p>
-            {session?.user?.isAdvertiser && (
+            {userRole.isAdvertiser && (
               <Link href="/topics/new">
                 <Button>{prefecture.name}のトピックを作成する</Button>
               </Link>
@@ -291,9 +398,19 @@ export default function PrefecturePage() {
                   <CardHeader
                     className={`bg-gradient-to-r ${gradient} bg-opacity-10 border-b`}
                   >
-                    <CardTitle className="flex items-center text-lg md:text-xl">
-                      <span className="mr-2">{emoji}</span>
-                      {topic.title}
+                    <CardTitle className="flex items-center text-lg md:text-xl justify-between">
+                      <div className="flex items-center">
+                        <span className="mr-2">{emoji}</span>
+                        {topic.title}
+                      </div>
+                      {userRole.isAdmin && (
+                        <Link href={`/admin/topic/${topic.id}`}>
+                          <Button variant="outline" size="sm" className="ml-2">
+                            <Shield className="h-3 w-3 mr-1" />
+                            管理
+                          </Button>
+                        </Link>
+                      )}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="p-6">
@@ -364,7 +481,7 @@ export default function PrefecturePage() {
                             }
                             // 購入済み記事は投稿者、購入者、管理者のみ閲覧可能
                             return (
-                              isAdmin ||
+                              userRole.isAdmin ||
                               article.userId === session.user.id ||
                               article.purchasedBy === session.user.id
                             );
@@ -388,7 +505,7 @@ export default function PrefecturePage() {
                                 }
                                 // 購入済み記事は投稿者、購入者、管理者のみ閲覧可能
                                 return (
-                                  isAdmin ||
+                                  userRole.isAdmin ||
                                   article.userId === session.user.id ||
                                   article.purchasedBy === session.user.id
                                 );
@@ -422,7 +539,29 @@ export default function PrefecturePage() {
                                         {article.content.slice(0, 80) + "..."}
                                       </ReactMarkdown>
                                     </div>
-                                    <div className="mt-4 space-y-1 text-xs text-gray-500">
+
+                                    {/* ブロックチェーン情報と統計バッジ - 可視化強化 */}
+                                    <div className="mt-4 flex flex-wrap gap-2 mb-3">
+                                      {/* PV数バッジ */}
+                                      <div className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded-full flex items-center">
+                                        <Eye className="h-3 w-3 mr-1" />
+                                        {articleViews[article.id] || 0} PV
+                                      </div>
+
+                                      {/* 投げ銭バッジ */}
+                                      <div className="text-xs bg-green-50 text-green-700 px-2 py-1 rounded-full flex items-center">
+                                        <Gift className="h-3 w-3 mr-1" />
+                                        {articleTips[article.id] || 0} XYM
+                                      </div>
+
+                                      {/* 価格バッジ */}
+                                      <div className="text-xs bg-purple-50 text-purple-700 px-2 py-1 rounded-full flex items-center">
+                                        <CreditCard className="h-3 w-3 mr-1" />
+                                        {article.xymPrice} XYM
+                                      </div>
+                                    </div>
+
+                                    <div className="mt-2 space-y-1 text-xs text-gray-500">
                                       <p className="flex items-center">
                                         <Calendar className="h-3 w-3 mr-1" />
                                         {article.updatedAt.split("T")[0]}
@@ -432,21 +571,33 @@ export default function PrefecturePage() {
                                         {authorNames[article.userId] ||
                                           "不明なユーザー"}
                                       </p>
-                                      <p className="flex items-center">
-                                        <Star className="h-3 w-3 mr-1" />
-                                        {article.xymPrice} XYM
-                                      </p>
                                     </div>
-                                    <div className="mt-4">
+                                    <div className="mt-4 flex gap-2">
                                       <Link href={`/article/${article.id}`}>
                                         <Button
                                           variant="outline"
                                           size="sm"
-                                          className="w-full hover:bg-primary hover:text-white transition-colors"
+                                          className="hover:bg-primary hover:text-white transition-colors"
                                         >
                                           記事を読む
                                         </Button>
                                       </Link>
+
+                                      {/* 管理者編集ボタン */}
+                                      {userRole.isAdmin && (
+                                        <Link
+                                          href={`/admin/article/${article.id}`}
+                                        >
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="hover:bg-red-100"
+                                          >
+                                            <Shield className="h-3 w-3 mr-1" />
+                                            管理
+                                          </Button>
+                                        </Link>
+                                      )}
                                     </div>
                                   </CardContent>
                                 </Card>
@@ -457,7 +608,7 @@ export default function PrefecturePage() {
                             <p className="text-muted-foreground mb-4">
                               このトピックの記事はまだありません
                             </p>
-                            {session && (
+                            {userRole.isLoggedIn && (
                               <div>
                                 <Link href={`/article/new`}>
                                   <Button variant="outline" size="sm">
@@ -491,15 +642,51 @@ export default function PrefecturePage() {
           地元ならではの視点で、観光ガイドには載っていない隠れた魅力をご紹介します。
         </p>
 
-        {session?.user && (
-          <div className="mt-8 flex flex-wrap gap-4">
+        {/* ブロックチェーン機能の説明パネル */}
+        {userRole.isLoggedIn && (
+          <div className="bg-gray-50 p-4 rounded-lg mb-6">
+            <h3 className="font-semibold mb-2">ブロックチェーン機能</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+              <div className="flex items-start p-3 bg-white rounded shadow-sm">
+                <Gift className="h-10 w-10 p-2 bg-green-100 text-green-600 rounded-lg mr-3 flex-shrink-0" />
+                <div>
+                  <p className="font-medium">投げ銭機能</p>
+                  <p className="text-gray-600">
+                    クリエイターに直接XYMで支援できます
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start p-3 bg-white rounded shadow-sm">
+                <CreditCard className="h-10 w-10 p-2 bg-purple-100 text-purple-600 rounded-lg mr-3 flex-shrink-0" />
+                <div>
+                  <p className="font-medium">記事買取機能</p>
+                  <p className="text-gray-600">
+                    価値ある記事をXYMで購入して所有権を得られます
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start p-3 bg-white rounded shadow-sm">
+                <TrendingUp className="h-10 w-10 p-2 bg-blue-100 text-blue-600 rounded-lg mr-3 flex-shrink-0" />
+                <div>
+                  <p className="font-medium">PV連動広告料</p>
+                  <p className="text-gray-600">
+                    閲覧数に応じた広告収入がクリエイターに入ります
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {userRole.isLoggedIn && (
+          <div className="mt-6 flex flex-wrap gap-4">
             <Link href="/article/new">
               <Button className="rounded-full px-6">
                 <span className="mr-2">{emoji}</span>
                 {prefecture.name}の記事を投稿する
               </Button>
             </Link>
-            {session.user.isAdvertiser && (
+            {userRole.isAdvertiser && (
               <Link href="/topics/new">
                 <Button variant="outline" className="rounded-full px-6">
                   <Info className="h-4 w-4 mr-2" />

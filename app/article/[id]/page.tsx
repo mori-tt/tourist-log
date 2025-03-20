@@ -170,16 +170,6 @@ export default function ArticleDetailPage() {
         fetchUserName(article.purchasedBy).then((name) => {
           setPurchaserName(name);
         });
-
-        // 購入日を取得（最初のpurchaseタイプの取引から取得）
-        fetchTransactionHistory().then(() => {
-          const purchaseTx = transactions.find((tx) => tx.type === "purchase");
-          if (purchaseTx) {
-            setPurchaseDate(
-              new Date(purchaseTx.timestamp).toLocaleString("ja-JP")
-            );
-          }
-        });
       }
 
       // 画像URLの検証
@@ -198,7 +188,17 @@ export default function ArticleDetailPage() {
         }
       }
     }
-  }, [article, setValue, session, fetchTransactionHistory, transactions]);
+  }, [article, setValue, session, fetchTransactionHistory]);
+
+  // transactions状態が更新されたときに購入日時を設定する別のuseEffect
+  useEffect(() => {
+    if (transactions.length > 0 && article?.isPurchased) {
+      const purchaseTx = transactions.find((tx) => tx.type === "purchase");
+      if (purchaseTx) {
+        setPurchaseDate(new Date(purchaseTx.timestamp).toLocaleString("ja-JP"));
+      }
+    }
+  }, [transactions, article?.isPurchased]);
 
   useEffect(() => {
     const fetchAuthorName = async () => {
@@ -914,7 +914,7 @@ export default function ArticleDetailPage() {
                 <p className="text-sm text-muted-foreground mb-4">
                   あなたが投稿した全ての記事からの収益情報です。
                 </p>
-                <Link href="/dashboard/earnings">
+                <Link href="/profile">
                   <Button className="w-full">収益情報を確認する</Button>
                 </Link>
               </div>
@@ -926,6 +926,151 @@ export default function ArticleDetailPage() {
                   <p className="text-muted-foreground">
                     収入データをグラフで表示予定
                   </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* トピックオーナー向けPV広告料支払い情報カード */}
+      {isTopicOwner && (
+        <Card className="bg-card shadow-sm rounded-xl overflow-hidden mb-8">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center">
+              <TrendingUp className="h-5 w-5 mr-2" />
+              PV広告料支払い情報
+              <Badge variant="outline" className="ml-2">
+                トピックオーナー専用
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              {/* PV広告料の計算と説明 */}
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <h3 className="font-medium mb-2">PV広告料の計算方法</h3>
+                <p className="text-sm text-muted-foreground mb-2">
+                  PV広告料は記事の閲覧数（PV）に基づいて計算されます。毎月の支払いは以下のように決定されます。
+                </p>
+                <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+                  <li>基本広告料: {relatedTopic?.adFee || 0} XYM</li>
+                  <li>PV閾値: {relatedTopic?.monthlyPVThreshold || 0} PV/月</li>
+                  <li>現在のPV数: {article.views || 0} PV</li>
+                </ul>
+              </div>
+
+              {/* 現在の広告料状況 */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <h4 className="text-sm text-green-700 font-medium mb-1">
+                    現在のPV数
+                  </h4>
+                  <p className="text-xl font-bold text-green-800">
+                    {article.views || 0} PV
+                  </p>
+                </div>
+                <div className="bg-amber-50 p-4 rounded-lg">
+                  <h4 className="text-sm text-amber-700 font-medium mb-1">
+                    PV閾値達成率
+                  </h4>
+                  <p className="text-xl font-bold text-amber-800">
+                    {relatedTopic?.monthlyPVThreshold
+                      ? Math.min(
+                          Math.round(
+                            ((article.views || 0) /
+                              relatedTopic.monthlyPVThreshold) *
+                              100
+                          ),
+                          100
+                        )
+                      : 0}
+                    %
+                  </p>
+                </div>
+                <div className="bg-purple-50 p-4 rounded-lg">
+                  <h4 className="text-sm text-purple-700 font-medium mb-1">
+                    支払い予定広告料
+                  </h4>
+                  <p className="text-xl font-bold text-purple-800">
+                    {relatedTopic?.monthlyPVThreshold &&
+                    (article.views || 0) >= relatedTopic.monthlyPVThreshold
+                      ? relatedTopic.adFee
+                      : 0}{" "}
+                    XYM
+                  </p>
+                </div>
+              </div>
+
+              {/* PV達成状況のプログレスバー */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>PV達成状況</span>
+                  <span>
+                    {article.views || 0}/{relatedTopic?.monthlyPVThreshold || 0}{" "}
+                    PV
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                  <div
+                    className="bg-primary h-2.5 rounded-full"
+                    style={{
+                      width: `${
+                        relatedTopic?.monthlyPVThreshold
+                          ? Math.min(
+                              Math.round(
+                                ((article.views || 0) /
+                                  relatedTopic.monthlyPVThreshold) *
+                                  100
+                              ),
+                              100
+                            )
+                          : 0
+                      }%`,
+                    }}
+                  ></div>
+                </div>
+              </div>
+
+              {/* 広告料支払いの履歴と予定 */}
+              <div className="border p-4 rounded-lg">
+                <h3 className="font-medium mb-3">広告料支払い</h3>
+                {(article.views || 0) >=
+                (relatedTopic?.monthlyPVThreshold || Infinity) ? (
+                  <div className="flex items-center p-3 bg-green-50 text-green-700 rounded-lg">
+                    <Check className="h-5 w-5 mr-2" />
+                    <div>
+                      <p className="font-medium">PV閾値を達成しました！</p>
+                      <p className="text-sm">
+                        月末に {relatedTopic?.adFee || 0} XYM
+                        の広告料が支払われる予定です。
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center p-3 bg-amber-50 text-amber-700 rounded-lg">
+                    <Info className="h-5 w-5 mr-2" />
+                    <div>
+                      <p className="font-medium">PV閾値達成まで</p>
+                      <p className="text-sm">
+                        広告料支払いには、あと{" "}
+                        {Math.max(
+                          (relatedTopic?.monthlyPVThreshold || 0) -
+                            (article.views || 0),
+                          0
+                        )}{" "}
+                        PVが必要です。
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-4">
+                  <Link href="/advertiser/payments">
+                    <Button variant="outline" className="w-full">
+                      広告料支払いページで詳細を見る
+                    </Button>
+                  </Link>
                 </div>
               </div>
             </div>

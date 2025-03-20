@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useSession, signIn } from "next-auth/react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,23 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import WalletAddressAlert from "@/components/WalletAddressAlert";
+import {
+  DollarSign,
+  ArrowLeft,
+  TrendingUp,
+  Info,
+  AlertTriangle,
+  CheckCircle2,
+  BarChart3,
+  CreditCard,
+  FileText,
+  Layers,
+} from "lucide-react";
+import Link from "next/link";
 
 interface PageViewData {
   id: number;
@@ -45,308 +61,663 @@ interface PageViewData {
   };
 }
 
+// 記事データの型定義
+interface ArticleData {
+  id: number;
+  title: string;
+  topicId: number;
+  views: number;
+  userId: string;
+  author: string;
+}
+
 export default function PaymentsPage() {
   const { data: session, status } = useSession();
   const [pageViews, setPageViews] = useState<PageViewData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
-
-  // 支払いダイアログ用の状態
+  const [walletError, setWalletError] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
-  const [selectedPageView, setSelectedPageView] = useState<PageViewData | null>(
+  const [currentPageView, setCurrentPageView] = useState<PageViewData | null>(
     null
   );
-  const [walletPrivateKey, setWalletPrivateKey] = useState("");
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [privateKey, setPrivateKey] = useState("");
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [paymentError, setPaymentError] = useState("");
+  const [paymentProcessing, setPaymentProcessing] = useState(false);
 
-  // データ取得
-  const fetchData = async () => {
+  // PV閾値達成状況用のステート
+  const [topicsSummary, setTopicsSummary] = useState<{
+    [topicId: number]: {
+      title: string;
+      adFee: number;
+      threshold: number;
+      currentPVs: number;
+      articleCount: number;
+      articles: ArticleData[];
+    };
+  }>({});
+
+  // fetchData関数を useCallback でラップ
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError("");
     try {
-      setLoading(true);
-      // PV数一覧を取得
-      const pageViewsRes = await fetch("/api/pageviews");
-      const pageViewsData = await pageViewsRes.json();
+      // ウォレットアドレスの確認
+      const walletRes = await fetch("/api/user/wallet");
+      if (walletRes.ok) {
+        const walletData = await walletRes.json();
+        if (!walletData.walletAddress) {
+          setWalletError(true);
+        }
+      }
 
-      setPageViews(pageViewsData);
-      setLoading(false);
-    } catch (error) {
-      console.error("データの取得に失敗しました:", error);
-      setError("データの取得に失敗しました");
+      // PVデータの取得
+      const res = await fetch("/api/pageviews");
+      if (!res.ok) {
+        throw new Error("PVデータの取得に失敗しました");
+      }
+      const data = await res.json();
+      setPageViews(data);
+
+      // トピックごとの記事とPV数の取得
+      const articlesRes = await fetch("/api/advertiser/articles");
+      if (articlesRes.ok) {
+        const articlesData = await articlesRes.json();
+
+        // トピックごとのサマリーを作成
+        processTopicsSummary(articlesData, data);
+      }
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("データの取得中にエラーが発生しました");
+      }
+    } finally {
       setLoading(false);
     }
-  };
+  }, []); // 空の依存配列でラップ
 
   useEffect(() => {
-    if (status === "authenticated") {
-      fetchData();
+    if (status === "loading") return;
+
+    if (!session) {
+      signIn();
+      return;
     }
-  }, [status]);
 
-  if (status === "loading") return <p>Loading...</p>;
-  if (!session) {
-    signIn();
-    return null;
-  }
+    // ユーザーが広告主でない場合はリダイレクト
+    if (!session.user.isAdvertiser) {
+      window.location.href = "/";
+      return;
+    }
 
-  // 広告主または管理者のみアクセス可能
-  const isAdmin = session.user?.isAdmin;
-  const isAdvertiser = session.user?.isAdvertiser;
+    fetchData();
+  }, [session, status, fetchData]);
 
-  if (!isAdvertiser && !isAdmin) {
-    return (
-      <Card className="m-8">
-        <CardContent>
-          <p className="mt-4">このページへのアクセス権限がありません。</p>
-        </CardContent>
-      </Card>
-    );
-  }
+  // トピックごとのPV達成状況サマリーを作成
+  const processTopicsSummary = (
+    articlesData: ArticleData[],
+    pvData: PageViewData[]
+  ) => {
+    const summary: {
+      [topicId: number]: {
+        title: string;
+        adFee: number;
+        threshold: number;
+        currentPVs: number;
+        articleCount: number;
+        articles: ArticleData[];
+      };
+    } = {};
 
-  // 支払い処理
+    // 記事データからトピックごとにグループ化
+    articlesData.forEach((article) => {
+      if (!summary[article.topicId]) {
+        // PVデータからトピック情報を取得
+        const topicPvData = pvData.find((pv) => pv.topicId === article.topicId);
+
+        summary[article.topicId] = {
+          title: topicPvData?.topic.title || "不明なトピック",
+          adFee: topicPvData?.topic.adFee || 0,
+          threshold: topicPvData?.topic.monthlyPVThreshold || 0,
+          currentPVs: article.views || 0,
+          articleCount: 1,
+          articles: [article],
+        };
+      } else {
+        summary[article.topicId].currentPVs += article.views || 0;
+        summary[article.topicId].articleCount += 1;
+        summary[article.topicId].articles.push(article);
+      }
+    });
+
+    setTopicsSummary(summary);
+  };
+
   const handlePayment = async () => {
-    if (!selectedPageView) return;
+    if (!currentPageView) return;
 
+    setPaymentProcessing(true);
+    setPaymentError("");
     try {
-      setIsProcessing(true);
-      setPaymentError("");
-
-      const response = await fetch("/api/transactions/advertise-payment", {
+      const response = await fetch(`/api/pageviews/${currentPageView.id}/pay`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          advertiserWalletPrivateKey: walletPrivateKey,
-          pageViewId: selectedPageView.id,
+          privateKey,
         }),
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        setPaymentDialogOpen(false);
-        setWalletPrivateKey("");
-        setSuccessMessage(
-          `広告費の支払いが完了しました。${result.paidCount}人のユーザーに支払いました。`
-        );
-        // 最新データを再取得
-        fetchData();
-      } else {
+      if (!response.ok) {
         const errorData = await response.json();
-        setPaymentError(errorData.error || "支払い処理に失敗しました");
+        throw new Error(
+          errorData.message || "支払い処理中にエラーが発生しました"
+        );
       }
+
+      await response.json();
+      setPaymentSuccess(true);
+
+      // 支払い完了後にデータを再取得
+      await fetchData();
+
+      // 3秒後にダイアログを閉じる
+      setTimeout(() => {
+        setPaymentDialogOpen(false);
+        setPaymentSuccess(false);
+        setPrivateKey("");
+      }, 3000);
     } catch (error) {
-      console.error("支払い処理エラー:", error);
-      setPaymentError("支払い処理中にエラーが発生しました");
+      if (error instanceof Error) {
+        setPaymentError(error.message);
+      } else {
+        setPaymentError("支払い処理中にエラーが発生しました");
+      }
     } finally {
-      setIsProcessing(false);
+      setPaymentProcessing(false);
     }
   };
 
-  // 支払いダイアログを開く
   const openPaymentDialog = (pageView: PageViewData) => {
-    setSelectedPageView(pageView);
+    setCurrentPageView(pageView);
     setPaymentDialogOpen(true);
+    setPaymentSuccess(false);
     setPaymentError("");
+    setPrivateKey("");
   };
 
-  // 支払いが可能か判定
   const canPay = (pageView: PageViewData) => {
-    if (pageView.isPaid) return false; // 既に支払い済み
-    if (!pageView.isConfirmed) return false; // まだ確定していない
-
-    // PVがしきい値未満は支払い不要
-    if (pageView.pageViews < pageView.topic.monthlyPVThreshold) return false;
-
-    // 管理者は常に支払い可能
-    if (isAdmin) return true;
-
-    // 広告主の場合、自分のトピックかつ10日以降
-    const now = new Date();
-    const isPaymentDate = now.getDate() >= 10;
     return (
-      pageView.topic.advertiser.email === session.user.email && isPaymentDate
+      pageView.isConfirmed &&
+      !pageView.isPaid &&
+      pageView.pageViews >= pageView.topic.monthlyPVThreshold
     );
   };
 
-  // 現在の日付
-  const now = new Date();
-  const isAfterTenthDay = now.getDate() >= 10;
+  // PV閾値達成率を計算
+  const calculatePvPercentage = (currentPVs: number, threshold: number) => {
+    if (threshold <= 0) return 0;
+    return Math.min(Math.round((currentPVs / threshold) * 100), 100);
+  };
+
+  if (status === "loading" || loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
-    <Card className="m-8 p-8">
-      <WalletAddressAlert />
+    <div className="container mx-auto px-4 py-8 max-w-7xl">
+      <div className="flex items-center mb-6">
+        <Link
+          href="/"
+          className="mr-4 flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          <span>ホームに戻る</span>
+        </Link>
+        <h1 className="text-3xl font-bold">広告料支払い管理</h1>
+      </div>
 
-      <CardHeader>
-        <CardTitle>広告費支払い管理</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {loading ? (
-          <p>データを読み込み中...</p>
-        ) : (
-          <>
-            {error && <p className="text-red-500 mb-4">{error}</p>}
-            {successMessage && (
-              <p className="text-green-500 mb-4">{successMessage}</p>
-            )}
+      {walletError && <WalletAddressAlert className="mb-6" />}
 
-            <div className="mb-4">
-              <h3 className="text-lg font-semibold">
-                広告費支払い一覧
-                {!isAfterTenthDay && !isAdmin && (
-                  <span className="text-yellow-500 ml-2">
-                    (支払い開始日は毎月10日からです)
-                  </span>
-                )}
-              </h3>
-              <p className="text-sm text-gray-500">
-                ※ PV数が支払い基準に達したトピックの広告費を支払います。
-              </p>
-            </div>
+      {error && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>エラー</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
-            <Table>
-              <TableCaption>広告費支払い一覧</TableCaption>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>トピック</TableHead>
-                  <TableHead>年月</TableHead>
-                  <TableHead>月間PV閾値</TableHead>
-                  <TableHead>実績PV数</TableHead>
-                  <TableHead>広告料(XYM)</TableHead>
-                  <TableHead>状態</TableHead>
-                  <TableHead>操作</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {pageViews
-                  .filter(
-                    (pv) =>
-                      // 広告主は自分のトピックのみ表示、管理者は全て表示
-                      isAdmin ||
-                      pv.topic.advertiser.email === session.user.email
-                  )
-                  .filter(
-                    (pv) =>
-                      // 確定済みのみ表示
-                      pv.isConfirmed
-                  )
-                  .map((pageView) => {
-                    // PV数が基準に達しているか
-                    const isEligibleForPayment =
-                      pageView.pageViews >= pageView.topic.monthlyPVThreshold;
+      <div className="grid grid-cols-1 gap-6">
+        <Tabs defaultValue="pv-status">
+          <TabsList className="mb-4">
+            <TabsTrigger value="pv-status">
+              <TrendingUp className="h-4 w-4 mr-2" />
+              PV達成状況
+            </TabsTrigger>
+            <TabsTrigger value="payment-history">
+              <DollarSign className="h-4 w-4 mr-2" />
+              支払い履歴
+            </TabsTrigger>
+          </TabsList>
 
-                    return (
-                      <TableRow key={pageView.id}>
-                        <TableCell>{pageView.topic.title}</TableCell>
-                        <TableCell>
-                          {pageView.year}年{pageView.month}月
-                        </TableCell>
-                        <TableCell>
-                          {pageView.topic.monthlyPVThreshold}
-                        </TableCell>
-                        <TableCell>{pageView.pageViews}</TableCell>
-                        <TableCell>
-                          {isEligibleForPayment ? (
-                            <span className="font-medium">
-                              {pageView.topic.adFee} XYM
-                            </span>
-                          ) : (
-                            <span className="text-gray-500">
-                              0 XYM (基準未達)
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {pageView.isPaid ? (
-                            <span className="text-green-500">
-                              支払い済み (
-                              {new Date(
-                                pageView.paidAt as string
-                              ).toLocaleDateString()}
-                              )
-                            </span>
-                          ) : isEligibleForPayment ? (
-                            <span className="text-yellow-500">支払い待ち</span>
-                          ) : (
-                            <span className="text-gray-500">支払い不要</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {canPay(pageView) && (
-                            <Button
-                              onClick={() => openPaymentDialog(pageView)}
-                              size="sm"
-                              variant="outline"
+          {/* PV達成状況タブ */}
+          <TabsContent value="pv-status">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <BarChart3 className="h-5 w-5 mr-2 text-primary" />
+                  トピックごとのPV達成状況
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Alert className="mb-6">
+                  <Info className="h-4 w-4" />
+                  <AlertTitle>広告料支払いの仕組み</AlertTitle>
+                  <AlertDescription>
+                    各トピックには月間PV閾値が設定されています。トピックに紐づく記事の合計PVが閾値を超えると、設定された広告料が記事投稿者に支払われます。
+                  </AlertDescription>
+                </Alert>
+
+                {Object.entries(topicsSummary).length === 0 ? (
+                  <div className="text-center py-12 bg-muted/30 rounded-lg">
+                    <FileText className="h-16 w-16 text-muted mx-auto mb-4" />
+                    <p className="text-lg font-medium mb-2">
+                      データがありません
+                    </p>
+                    <p className="text-muted-foreground">
+                      まだトピックの作成や記事の投稿がありません。
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {Object.entries(topicsSummary).map(([topicId, data]) => {
+                      const pvPercentage = calculatePvPercentage(
+                        data.currentPVs,
+                        data.threshold
+                      );
+                      const thresholdReached =
+                        data.currentPVs >= data.threshold;
+
+                      return (
+                        <div key={topicId} className="rounded-lg border p-6">
+                          <div className="flex justify-between items-start mb-4">
+                            <div>
+                              <h3 className="text-lg font-medium">
+                                {data.title}
+                              </h3>
+                              <p className="text-sm text-muted-foreground">
+                                記事数: {data.articleCount}件
+                              </p>
+                            </div>
+                            <Badge
+                              className={
+                                thresholdReached
+                                  ? "bg-green-100 text-green-800 hover:bg-green-200"
+                                  : "bg-amber-100 text-amber-800 hover:bg-amber-200"
+                              }
                             >
-                              支払い実行
-                            </Button>
-                          )}
+                              {thresholdReached ? "達成" : "未達成"}
+                            </Badge>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                            <div className="bg-blue-50 p-4 rounded-lg">
+                              <p className="text-sm text-blue-700 mb-1">
+                                現在のPV
+                              </p>
+                              <p className="text-xl font-bold text-blue-800">
+                                {data.currentPVs} PV
+                              </p>
+                            </div>
+                            <div className="bg-purple-50 p-4 rounded-lg">
+                              <p className="text-sm text-purple-700 mb-1">
+                                PV閾値
+                              </p>
+                              <p className="text-xl font-bold text-purple-800">
+                                {data.threshold} PV
+                              </p>
+                            </div>
+                            <div className="bg-green-50 p-4 rounded-lg">
+                              <p className="text-sm text-green-700 mb-1">
+                                広告料
+                              </p>
+                              <p className="text-xl font-bold text-green-800">
+                                {data.adFee} XYM
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* PV達成ステータスバー */}
+                          <div className="mb-4">
+                            <div className="flex justify-between mb-2 text-sm">
+                              <span className="font-medium">PV達成状況</span>
+                              <span>
+                                {data.currentPVs}/{data.threshold} PV (
+                                {pvPercentage}%)
+                              </span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2.5">
+                              <div
+                                className={`h-2.5 rounded-full ${
+                                  thresholdReached
+                                    ? "bg-green-500"
+                                    : "bg-amber-500"
+                                }`}
+                                style={{ width: `${pvPercentage}%` }}
+                              ></div>
+                            </div>
+                          </div>
+
+                          {/* トピックの記事一覧 */}
+                          <div className="mt-4">
+                            <h4 className="text-sm font-medium mb-2 flex items-center">
+                              <Layers className="h-4 w-4 mr-1 text-muted-foreground" />
+                              このトピックの記事
+                            </h4>
+                            <div className="rounded-md border">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>記事タイトル</TableHead>
+                                    <TableHead className="text-right">
+                                      PV数
+                                    </TableHead>
+                                    <TableHead className="text-right">
+                                      作成者
+                                    </TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {data.articles.map((article) => (
+                                    <TableRow key={article.id}>
+                                      <TableCell className="font-medium">
+                                        <Link
+                                          href={`/article/${article.id}`}
+                                          className="hover:underline text-primary"
+                                        >
+                                          {article.title}
+                                        </Link>
+                                      </TableCell>
+                                      <TableCell className="text-right">
+                                        {article.views || 0} PV
+                                      </TableCell>
+                                      <TableCell className="text-right">
+                                        {article.author}
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          </div>
+
+                          {/* 支払いアクション */}
+                          <div className="mt-6 flex justify-end">
+                            {thresholdReached ? (
+                              <Button
+                                onClick={() => {
+                                  // 対応するPageViewDataを見つける
+                                  const relevantPV = pageViews.find(
+                                    (pv) => pv.topicId === Number(topicId)
+                                  );
+                                  if (relevantPV && canPay(relevantPV)) {
+                                    openPaymentDialog(relevantPV);
+                                  }
+                                }}
+                                disabled={
+                                  !pageViews.some(
+                                    (pv) =>
+                                      pv.topicId === Number(topicId) &&
+                                      canPay(pv)
+                                  )
+                                }
+                                className="bg-green-600 hover:bg-green-700 text-white"
+                              >
+                                <DollarSign className="h-4 w-4 mr-2" />
+                                広告料を支払う
+                              </Button>
+                            ) : (
+                              <div className="flex items-center text-sm text-amber-600">
+                                <AlertTriangle className="h-4 w-4 mr-1" />
+                                <span>PV閾値未達成のため支払いできません</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* 支払い履歴タブ */}
+          <TabsContent value="payment-history">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <CreditCard className="h-5 w-5 mr-2 text-primary" />
+                  広告料支払い履歴
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableCaption>広告料支払い履歴一覧</TableCaption>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>トピック</TableHead>
+                      <TableHead>年/月</TableHead>
+                      <TableHead className="text-right">PV数</TableHead>
+                      <TableHead className="text-right">閾値</TableHead>
+                      <TableHead className="text-right">広告料</TableHead>
+                      <TableHead className="text-right">ステータス</TableHead>
+                      <TableHead className="text-right">アクション</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {pageViews.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-4">
+                          支払いデータがありません
                         </TableCell>
                       </TableRow>
-                    );
-                  })}
-              </TableBody>
-            </Table>
-          </>
-        )}
-      </CardContent>
+                    ) : (
+                      pageViews.map((pageView) => (
+                        <TableRow key={pageView.id}>
+                          <TableCell>{pageView.topic.title}</TableCell>
+                          <TableCell>
+                            {pageView.year}/{pageView.month}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {pageView.pageViews}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {pageView.topic.monthlyPVThreshold}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {pageView.topic.adFee} XYM
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {pageView.isPaid ? (
+                              <Badge
+                                variant="outline"
+                                className="bg-green-100 text-green-800 border-green-200"
+                              >
+                                支払い済み
+                              </Badge>
+                            ) : pageView.isConfirmed ? (
+                              pageView.pageViews >=
+                              pageView.topic.monthlyPVThreshold ? (
+                                <Badge
+                                  variant="outline"
+                                  className="bg-blue-100 text-blue-800 border-blue-200"
+                                >
+                                  支払い待ち
+                                </Badge>
+                              ) : (
+                                <Badge
+                                  variant="outline"
+                                  className="bg-amber-100 text-amber-800 border-amber-200"
+                                >
+                                  閾値未達
+                                </Badge>
+                              )
+                            ) : (
+                              <Badge
+                                variant="outline"
+                                className="bg-gray-100 text-gray-800 border-gray-200"
+                              >
+                                未確定
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {canPay(pageView) ? (
+                              <Button
+                                onClick={() => openPaymentDialog(pageView)}
+                                size="sm"
+                                className="bg-green-600 hover:bg-green-700 text-white"
+                              >
+                                支払う
+                              </Button>
+                            ) : pageView.isPaid ? (
+                              <div className="flex items-center justify-end text-green-600">
+                                <CheckCircle2 className="h-4 w-4 mr-1" />
+                                <span className="text-xs">完了</span>
+                              </div>
+                            ) : (
+                              <Button size="sm" variant="outline" disabled>
+                                未対応
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
 
       {/* 支払いダイアログ */}
       <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>広告費の支払い</DialogTitle>
+            <DialogTitle>広告料の支払い</DialogTitle>
             <DialogDescription>
-              {selectedPageView && (
-                <>
-                  <p className="mb-2">
-                    <strong>{selectedPageView.topic.title}</strong>の
-                    {selectedPageView.year}年{selectedPageView.month}
-                    月分の広告費
-                    <strong> {selectedPageView.topic.adFee} XYM </strong>
-                    を支払います。
-                  </p>
-                  <p>支払いに使用するウォレットの秘密鍵を入力してください。</p>
-                </>
-              )}
+              {currentPageView
+                ? `${currentPageView.topic.title}の${currentPageView.year}年${currentPageView.month}月分の広告料を支払います。`
+                : "広告料を支払います。"}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="privateKey" className="text-right">
-                秘密鍵
-              </label>
-              <Input
-                id="privateKey"
-                type="password"
-                className="col-span-3"
-                value={walletPrivateKey}
-                onChange={(e) => setWalletPrivateKey(e.target.value)}
-                placeholder="Symbolウォレットの秘密鍵"
-              />
+          {paymentSuccess ? (
+            <div className="py-6 flex flex-col items-center justify-center">
+              <div className="rounded-full bg-green-100 p-3 mb-4">
+                <CheckCircle2 className="h-8 w-8 text-green-600" />
+              </div>
+              <h3 className="text-xl font-medium text-center mb-2">
+                支払いが完了しました
+              </h3>
+              <p className="text-center text-muted-foreground">
+                広告料の支払いが正常に処理されました。
+              </p>
             </div>
-            {paymentError && <p className="text-red-500">{paymentError}</p>}
-          </div>
+          ) : (
+            <>
+              <div className="py-4">
+                {currentPageView && (
+                  <div className="bg-muted p-4 rounded-lg mb-4">
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <p className="text-muted-foreground">トピック:</p>
+                        <p className="font-medium">
+                          {currentPageView.topic.title}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">期間:</p>
+                        <p className="font-medium">
+                          {currentPageView.year}年{currentPageView.month}月
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">PV数:</p>
+                        <p className="font-medium">
+                          {currentPageView.pageViews}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">閾値:</p>
+                        <p className="font-medium">
+                          {currentPageView.topic.monthlyPVThreshold}
+                        </p>
+                      </div>
+                      <div className="col-span-2">
+                        <p className="text-muted-foreground">支払金額:</p>
+                        <p className="font-bold text-lg text-primary">
+                          {currentPageView.topic.adFee} XYM
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setPaymentDialogOpen(false)}
-              disabled={isProcessing}
-            >
-              キャンセル
-            </Button>
-            <Button
-              onClick={handlePayment}
-              disabled={isProcessing || !walletPrivateKey}
-            >
-              {isProcessing ? "処理中..." : "支払い実行"}
-            </Button>
-          </DialogFooter>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm font-medium mb-2">秘密鍵を入力</p>
+                    <Input
+                      type="password"
+                      placeholder="秘密鍵を入力してください"
+                      value={privateKey}
+                      onChange={(e) => setPrivateKey(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      秘密鍵は安全に処理され、保存されません
+                    </p>
+                  </div>
+
+                  {paymentError && (
+                    <Alert variant="destructive">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertTitle>エラー</AlertTitle>
+                      <AlertDescription>{paymentError}</AlertDescription>
+                    </Alert>
+                  )}
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setPaymentDialogOpen(false)}
+                  disabled={paymentProcessing}
+                >
+                  キャンセル
+                </Button>
+                <Button
+                  onClick={handlePayment}
+                  disabled={!privateKey || paymentProcessing}
+                >
+                  {paymentProcessing ? "処理中..." : "支払いを実行"}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
-    </Card>
+    </div>
   );
 }
