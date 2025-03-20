@@ -34,6 +34,18 @@ export async function POST(req: Request) {
 
     // 既に購入済みの場合は中断
     if (article.isPurchased) {
+      // 広告主がこの記事を購入していた場合、購入済みと表示するだけでエラーにしない
+      if (article.purchasedBy === advertiserId) {
+        return NextResponse.json(
+          {
+            message: "You have already purchased this article",
+            isPurchased: true,
+            purchasedByCurrentUser: true,
+          },
+          { status: 200 }
+        );
+      }
+
       return NextResponse.json(
         { error: "Article has already been purchased" },
         { status: 400 }
@@ -65,6 +77,13 @@ export async function POST(req: Request) {
       },
     });
 
+    // メタデータの準備
+    const metadata = JSON.stringify({
+      articleId: Number(articleId),
+      purchaseAmount,
+      purchaserId: advertiserId,
+    });
+
     // DBに取引情報を記録（購入時は tipAmount フィールドを購入額として利用）
     const transactionRecord = await prisma.transaction.create({
       data: {
@@ -73,6 +92,9 @@ export async function POST(req: Request) {
         xymAmount: purchaseAmount,
         transactionHash: transactionResponse.transactionInfo.hash,
         type: "purchase",
+        userId: advertiserId,
+        articleId: Number(articleId),
+        metadata,
       },
     });
 

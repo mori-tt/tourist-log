@@ -116,8 +116,13 @@ model Transaction {
   topicId         Int
   isReceived      Boolean         @default(false)
   xymAmount       Float
+  userId          String?
+  articleId       Int?            // 記事ID
+  metadata        String?         // JSON形式のメタデータ
 
   @@index([topicId])
+  @@index([userId])
+  @@index([articleId])
 }
 
 model MonthlyPageView {

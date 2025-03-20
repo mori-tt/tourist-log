@@ -18,8 +18,10 @@ export interface Article {
   user?: {
     id: string;
     walletAddress?: string;
+    name?: string;
   };
   views?: number;
+  createdAt: string;
 }
 
 export interface ArticleFormData {

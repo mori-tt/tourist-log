@@ -1,68 +1,54 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
+import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 
-// Next.js 15の型チェックを通過する形式
-export async function GET(request: Request) {
+// https://nextjs.org/docs/app/building-your-application/routing/route-handlers
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ articleId: string }> }
+) {
   try {
-    // URLからパラメータを抽出（標準のWeb APIアプローチ）
-    const url = new URL(request.url);
-    const pathParts = url.pathname.split("/");
-    const articleIdStr = pathParts[pathParts.length - 1];
-    const articleId = Number(articleIdStr);
+    const { params } = await context;
+    const { articleId } = await params;
+    const articleIdNumber = parseInt(articleId, 10);
 
-    // セッションからユーザー情報を取得
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
+    if (isNaN(articleIdNumber)) {
+      return NextResponse.json({ error: "無効な記事IDです" }, { status: 400 });
     }
 
-    if (isNaN(articleId)) {
-      return NextResponse.json({ error: "記事IDが無効です" }, { status: 400 });
-    }
-
-    // 記事情報を取得
+    // 記事のトピックIDを取得
     const article = await prisma.article.findUnique({
-      where: { id: articleId },
+      where: { id: articleIdNumber },
+      select: { topicId: true, id: true },
     });
 
     if (!article) {
-      return NextResponse.json(
-        { error: "記事が見つかりません" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Article not found" }, { status: 404 });
     }
 
-    // 記事の所有者またはアプリ管理者のみが取引履歴を取得可能
-    if (article.userId !== session.user.id && !session.user.isAdmin) {
-      return NextResponse.json(
-        { error: "この操作を行う権限がありません" },
-        { status: 403 }
-      );
-    }
-
-    // 記事に関連する取引履歴を取得（Prismaスキーマに合わせて調整）
-    // Prismaのテーブル構造に合わせてクエリを調整する必要があります
-    const transactions = await prisma.$queryRaw`
-      SELECT * FROM "Transaction"
-      WHERE "articleId" = ${articleId}
-      ORDER BY "createdAt" DESC
-    `;
-
-    // PVに基づく広告収益の推定値を計算
-    const viewCount = article.viewCount || 0;
-    const pvRevenue = Math.floor(viewCount * 0.01);
-
-    return NextResponse.json({
-      success: true,
-      transactions: transactions,
-      pvRevenue: pvRevenue,
+    // トランザクション履歴を取得
+    // 特定の記事に関連するトランザクションのみを取得する
+    const transactions = await prisma.transaction.findMany({
+      where: {
+        topicId: article.topicId || 0,
+        // 記事購入や投げ銭など、この記事に直接関連するトランザクションのみに絞り込む
+        OR: [
+          { articleId: articleIdNumber },
+          // articleIdフィールドがない場合の後方互換性のため、
+          // 記事IDをメタデータとして含むトランザクションも検索
+          { metadata: { contains: `"articleId":${articleIdNumber}` } },
+        ],
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
     });
+
+    return NextResponse.json({ transactions });
   } catch (error) {
-    console.error("取引履歴の取得エラー:", error);
+    console.error("取引履歴の取得に失敗しました:", error);
     return NextResponse.json(
-      { error: "取引履歴の取得中にエラーが発生しました" },
+      { error: "取引履歴の取得に失敗しました" },
       { status: 500 }
     );
   }

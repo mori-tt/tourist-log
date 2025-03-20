@@ -26,18 +26,22 @@ const networkType = NetworkType.TEST_NET; // 本番時は NetworkType.MAIN_NET �
  * @param privateKey 送信者の秘密鍵
  * @param recipientAddress 受信者のアドレス
  * @param amount 送信するXYMの量（XYM単位）
- * @returns トランザクション情報と手数料
+ * @param message トランザクションに添付するメッセージ
+ * @returns トランザクション情報
  */
-export async function sendRewardTransaction(
+export async function sendXYMTransaction(
   privateKey: string,
   recipientAddress: string,
-  amount: number
-): Promise<{ transactionInfo: SignedTransaction; fee: string }> {
+  amount: number,
+  message = ""
+): Promise<{ hash: string; fee: string }> {
   const account = Account.createFromPrivateKey(privateKey, networkType);
-  const epochAdjustment = Number(process.env.EPOCH_ADJUSTMENT);
+  const epochAdjustment = Number(process.env.EPOCH_ADJUSTMENT) || 1637848847;
 
   // SymbolネットワークのモザイクID（XYM）
-  const currencyMosaicId = new MosaicId(process.env.CURRENCY_MOSAIC_ID!);
+  const currencyMosaicId = new MosaicId(
+    process.env.CURRENCY_MOSAIC_ID || "6BED913FA20223F8"
+  );
 
   // 金額をUInt64に変換（XYM単位の金額をそのまま使用）
   // Symbol ネットワークでは1XYM = 1,000,000マイクロXYM
@@ -50,26 +54,45 @@ export async function sendRewardTransaction(
     Deadline.create(epochAdjustment),
     Address.createFromRawAddress(recipientAddress),
     [new Mosaic(currencyMosaicId, amountUInt64)],
-    PlainMessage.create(`Reward payment of ${amount} XYM`),
+    PlainMessage.create(message || `Payment of ${amount} XYM`),
     networkType
   );
 
   // 手数料の計算と設定
-  const feeMultiplier = Number(process.env.SYMBOL_FEE_MULTIPLIER);
+  const feeMultiplier = Number(process.env.SYMBOL_FEE_MULTIPLIER) || 100;
   const txSize = transferTransaction.size;
   const feeAmount = txSize * feeMultiplier;
   const signReadyTx = transferTransaction.setMaxFee(feeAmount);
   const fee = UInt64.fromUint(feeAmount);
 
-  const networkGenerationHash = process.env.NETWORK_GENERATION_HASH!;
+  const networkGenerationHash =
+    process.env.NETWORK_GENERATION_HASH ||
+    "7FCCD304802016BEBBCD342A332F91FF1F3BB5E902988B352697BE245F48E836";
   const signedTransaction = account.sign(signReadyTx, networkGenerationHash);
 
   const transactionHttp = repositoryFactory.createTransactionRepository();
   await transactionHttp.announce(signedTransaction).toPromise();
 
   return {
-    transactionInfo: signedTransaction,
+    hash: signedTransaction.hash,
     fee: fee.toString(),
+  };
+}
+
+/**
+ * 下位互換性のために残しておく
+ * @deprecated 代わりに sendXYMTransaction を使用してください
+ */
+export async function sendRewardTransaction(
+  privateKey: string,
+  recipientAddress: string,
+  amount: number
+): Promise<{ transactionInfo: { hash: string }; fee: string }> {
+  const result = await sendXYMTransaction(privateKey, recipientAddress, amount);
+
+  return {
+    transactionInfo: { hash: result.hash },
+    fee: result.fee,
   };
 }
 

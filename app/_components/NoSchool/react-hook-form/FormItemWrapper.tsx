@@ -16,9 +16,9 @@ export const FormItemWrapper = <
   children,
   label,
 }: FormItemWrapperProps<TFieldValues>) => {
-  const errors = useFormState({
+  const { errors } = useFormState({
     control,
-  }).errors;
+  });
 
   const error = errors[name];
 

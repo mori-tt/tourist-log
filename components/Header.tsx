@@ -192,18 +192,6 @@ export default function Header() {
                   >
                     プロフィール
                   </Link>
-                  <Link
-                    href="/dashboard"
-                    onClick={() => setIsOpen(false)}
-                    className={cn(
-                      "block px-3 py-2 rounded-md text-base font-medium text-center",
-                      pathname === "/dashboard"
-                        ? "bg-primary/10 text-primary"
-                        : "text-gray-700 hover:bg-gray-100"
-                    )}
-                  >
-                    ダッシュボード
-                  </Link>
                   {status === "authenticated" && session?.user?.isAdmin && (
                     <Link
                       href="/admin/users"

@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { Globe, Facebook, Instagram, Twitter, ChevronUp } from "lucide-react";
+import { Globe, Instagram, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 // 日本の地方と都道府県コードを定義
@@ -138,20 +138,6 @@ export default function Footer() {
               <a
                 href="#"
                 className="text-gray-400 hover:text-primary transition-colors"
-                aria-label="Facebook"
-              >
-                <Facebook size={20} />
-              </a>
-              <a
-                href="#"
-                className="text-gray-400 hover:text-primary transition-colors"
-                aria-label="Twitter"
-              >
-                <Twitter size={20} />
-              </a>
-              <a
-                href="#"
-                className="text-gray-400 hover:text-primary transition-colors"
                 aria-label="Instagram"
               >
                 <Instagram size={20} />
@@ -167,12 +153,12 @@ export default function Footer() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {regions.map((region) => (
                 <div key={region.name} className="mb-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2 text-center sm:text-left">
                     {region.name}
                   </h4>
                   <ul className="space-y-1">
                     {region.prefectures.map((pref) => (
-                      <li key={pref.code}>
+                      <li key={pref.code} className="text-center sm:text-left">
                         <Link
                           href={`/prefecture/${pref.code}`}
                           className="text-xs text-gray-600 hover:text-primary hover:underline transition-colors"
