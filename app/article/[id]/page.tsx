@@ -32,6 +32,7 @@ import {
   Check,
   Info,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 // 取引履歴の型定義
 interface Transaction {
@@ -40,6 +41,7 @@ interface Transaction {
   amount: number;
   timestamp: string;
   transactionHash: string;
+  userId?: number;
 }
 
 export default function ArticleDetailPage() {
@@ -68,6 +70,23 @@ export default function ArticleDetailPage() {
   const [authorName, setAuthorName] = useState<string>("");
   const [totalReceivedXym, setTotalReceivedXym] = useState<number>(0);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [purchaserName, setPurchaserName] = useState<string>("");
+  const [purchaseDate, setPurchaseDate] = useState<string>("");
+
+  // ユーザー名を取得する関数
+  const fetchUserName = async (userId: number | string) => {
+    if (!userId) return "不明なユーザー";
+    try {
+      const res = await fetch(`/api/user/${userId}`);
+      if (res.ok) {
+        const userData = await res.json();
+        return userData.name || "名前未設定";
+      }
+    } catch (error) {
+      console.error("ユーザー名の取得に失敗しました:", error);
+    }
+    return "不明なユーザー";
+  };
 
   // XYM取引履歴を取得する関数
   const fetchTransactionHistory = React.useCallback(async () => {
@@ -137,6 +156,32 @@ export default function ArticleDetailPage() {
         fetchTransactionHistory();
       }
 
+      // 管理者または記事作成者、または記事購入者であれば、取引履歴を取得
+      if (
+        session?.user?.isAdmin ||
+        session?.user?.id === article.userId ||
+        (session?.user?.id === article.purchasedBy && article.isPurchased)
+      ) {
+        fetchTransactionHistory();
+      }
+
+      // 購入者の名前を取得
+      if (article.isPurchased && article.purchasedBy) {
+        fetchUserName(article.purchasedBy).then((name) => {
+          setPurchaserName(name);
+        });
+
+        // 購入日を取得（最初のpurchaseタイプの取引から取得）
+        fetchTransactionHistory().then(() => {
+          const purchaseTx = transactions.find((tx) => tx.type === "purchase");
+          if (purchaseTx) {
+            setPurchaseDate(
+              new Date(purchaseTx.timestamp).toLocaleString("ja-JP")
+            );
+          }
+        });
+      }
+
       // 画像URLの検証
       if (article.images) {
         const validImages = article.images.filter(
@@ -153,7 +198,7 @@ export default function ArticleDetailPage() {
         }
       }
     }
-  }, [article, setValue, session, fetchTransactionHistory]);
+  }, [article, setValue, session, fetchTransactionHistory, transactions]);
 
   useEffect(() => {
     const fetchAuthorName = async () => {
@@ -362,29 +407,25 @@ export default function ArticleDetailPage() {
 
   // 記事の内容を取得する関数
   const getArticleContent = () => {
-    // 未ログインの場合
-    if (!session) {
-      // 購入済み記事は表示しない
-      if (article.isPurchased) {
-        return "この記事はログイン後に購入することで閲覧できます。";
-      }
-      return article.content;
-    }
+    // 購入済み記事のアクセス権チェック
+    const hasArticleAccess =
+      session &&
+      (article.userId === session.user.id || // 記事作成者
+        article.purchasedBy === session.user.id || // 記事購入者
+        session.user.isAdmin || // 管理者
+        isTopicOwner); // トピックオーナー（広告主）
 
-    // アクセス権の確認: 自分の記事、購入済み記事を購入した人、管理者は閲覧可能
-    if (
-      article.userId === session.user.id ||
-      article.purchasedBy === session.user.id ||
-      session.user.isAdmin
-    ) {
-      return article.content;
-    }
-
-    // それ以外で購入済み記事は購入後に閲覧可能
+    // 購入済み記事の場合
     if (article.isPurchased) {
-      return "この記事は購入後にご覧いただけます。";
+      // アクセス権がある場合のみフルコンテンツを表示
+      if (hasArticleAccess) {
+        return article.content;
+      }
+      // アクセス権がない場合は購入メッセージのみ
+      return "";
     }
 
+    // 購入不要の記事は全ユーザーに表示
     return article.content;
   };
 
@@ -407,14 +448,13 @@ export default function ArticleDetailPage() {
   // 記事購入ボタンを表示すべきかの条件
   const shouldShowPurchaseButton =
     session &&
-    article.isPurchased &&
-    !hasAccess &&
-    // 自分の記事ではない場合
-    (session.user.id !== article.userId ||
-      // または広告主で自分のトピックの記事の場合
+    // 記事が購入が必要で、アクセス権がない場合
+    ((article.isPurchased && !hasAccess) ||
+      // または広告主で購入が必要な記事の場合（自分のトピックの記事も含む）
       (session.user?.isAdvertiser &&
-        relatedTopic &&
-        relatedTopic.advertiserId === session.user.id));
+        article.isPurchased &&
+        article.userId !== session.user.id &&
+        article.purchasedBy !== session.user.id));
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-5xl">
@@ -487,38 +527,30 @@ export default function ArticleDetailPage() {
             </div>
           )}
 
-          {/* 購入済みメッセージ表示 */}
-          {article.isPurchased && article.purchasedBy === session?.user?.id && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-              <div className="flex items-start">
-                <Check className="h-5 w-5 text-green-600 mt-0.5 mr-3 flex-shrink-0" />
-                <div>
-                  <h3 className="font-medium mb-1">購入済み記事</h3>
-                  <p className="text-sm text-muted-foreground">
-                    あなたはこの記事を購入済みです。全文をお読みいただけます。
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* 記事コンテンツ */}
           <div className="prose prose-sm sm:prose max-w-none">
-            {/* 記事の画像を表示 */}
-            {article.images && article.images.length > 0 && (
-              <div className="mb-6 grid gap-4 grid-cols-1 sm:grid-cols-2">
-                {article.images.map((image, index) => (
-                  <SafeImage
-                    key={index}
-                    src={image.url}
-                    alt={`記事の画像 ${index + 1}`}
-                    width={800}
-                    height={600}
-                    className="rounded-lg shadow-md w-full h-auto object-cover"
-                  />
-                ))}
-              </div>
-            )}
+            {/* 記事の画像を表示 - 購入済み記事の場合は権限を確認 */}
+            {article.images &&
+              article.images.length > 0 &&
+              (!article.isPurchased ||
+                (session &&
+                  (article.userId === session.user.id ||
+                    article.purchasedBy === session.user.id ||
+                    session.user.isAdmin ||
+                    isTopicOwner))) && (
+                <div className="mb-6 grid gap-4 grid-cols-1 sm:grid-cols-2">
+                  {article.images.map((image, index) => (
+                    <SafeImage
+                      key={index}
+                      src={image.url}
+                      alt={`記事の画像 ${index + 1}`}
+                      width={800}
+                      height={600}
+                      className="rounded-lg shadow-md w-full h-auto object-cover"
+                    />
+                  ))}
+                </div>
+              )}
 
             <MarkdownWithZoomableImages content={getArticleContent()} />
           </div>
@@ -528,13 +560,22 @@ export default function ArticleDetailPage() {
             <div className="flex items-center text-amber-800">
               <DollarSign className="h-5 w-5 flex-shrink-0 mr-2" />
               <p className="font-medium">記事価格: {article.xymPrice} XYM</p>
+              {/* 管理者に購入状態を表示 */}
+              {session?.user?.isAdmin && article.isPurchased && (
+                <span className="ml-2 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                  購入済み
+                  {purchaserName && `（${purchaserName}さん）`}
+                  {purchaseDate && ` ${purchaseDate}`}
+                </span>
+              )}
             </div>
           </div>
 
           {/* 記事のアクション */}
           <div className="flex flex-wrap gap-4 mt-8">
-            {/* 投げ銭ボタン - 広告主のみ表示、かつ自分の記事ではなく、購入済みでない場合に表示 */}
+            {/* 投げ銭ボタン - 広告主のみ表示（管理者は除外）、かつ自分の記事ではなく、購入済みでない場合に表示 */}
             {session?.user?.isAdvertiser &&
+              !session.user.isAdmin &&
               session.user.id !== article.userId &&
               !article.isPurchased && (
                 <Button
@@ -616,8 +657,8 @@ export default function ArticleDetailPage() {
               </>
             )}
 
-            {/* 投稿者にだけ編集削除を表示 */}
-            {session?.user?.id === article.userId && (
+            {/* 投稿者にだけ編集削除を表示 - ただし購入済み記事は編集削除不可 */}
+            {session?.user?.id === article.userId && !article.isPurchased && (
               <>
                 <Link href={`/article/${articleId}/edit`}>
                   <Button variant="outline" className="flex items-center gap-2">
@@ -634,6 +675,14 @@ export default function ArticleDetailPage() {
                   削除
                 </Button>
               </>
+            )}
+
+            {/* 記事が購入済みの場合に投稿者に表示するメッセージ */}
+            {session?.user?.id === article.userId && article.isPurchased && (
+              <div className="flex items-center gap-2 text-sm bg-amber-50 text-amber-700 border border-amber-200 rounded-md px-3 py-2">
+                <Info className="h-4 w-4" />
+                <span>この記事は購入済みのため編集・削除できません</span>
+              </div>
             )}
 
             {/* 管理者に削除ボタンを表示 */}
@@ -674,50 +723,208 @@ export default function ArticleDetailPage() {
         </CardContent>
       </Card>
 
-      {/* トランザクション履歴カード - 記事所有者にのみ表示 */}
-      {session?.user?.id === article.userId && transactions.length > 0 && (
+      {/* トランザクション履歴カード - 記事所有者および管理者に表示 */}
+      {(session?.user?.id === article.userId ||
+        session?.user?.isAdmin ||
+        (session?.user?.isAdvertiser &&
+          (article.purchasedBy === session.user.id || isTopicOwner))) &&
+        transactions.length > 0 && (
+          <Card className="bg-card shadow-sm rounded-xl overflow-hidden mb-8">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center">
+                <DollarSign className="h-5 w-5 mr-2" />
+                XYM取引履歴
+                {session?.user?.isAdmin && (
+                  <Badge variant="outline" className="ml-2">
+                    管理者用表示
+                  </Badge>
+                )}
+                {session?.user?.isAdvertiser && isTopicOwner && (
+                  <Badge variant="outline" className="ml-2">
+                    トピックオーナー用表示
+                  </Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* 管理者のみに表示する記事ステータスの概要 */}
+                {session?.user?.isAdmin && (
+                  <div className="mb-4 p-4 bg-slate-50 rounded-lg">
+                    <h3 className="font-medium mb-2">記事ステータス概要</h3>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-muted-foreground">記事ID:</p>
+                        <p className="font-medium">{article.id}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">作成者ID:</p>
+                        <p className="font-medium">{article.userId}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">作成者名:</p>
+                        <p className="font-medium">{authorName}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">購入状態:</p>
+                        <p className="font-medium">
+                          {article.isPurchased
+                            ? article.purchasedBy
+                              ? `購入済み (${purchaserName}さん)`
+                              : "購入済み"
+                            : "未購入"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">購入日時:</p>
+                        <p className="font-medium">
+                          {purchaseDate || "未購入"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">価格:</p>
+                        <p className="font-medium">{article.xymPrice} XYM</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">PV数:</p>
+                        <p className="font-medium">{article.views || 0}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">推定収益:</p>
+                        <p className="font-medium">
+                          {Math.floor((article.views || 0) * 0.01)} XYM
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* トランザクション一覧 */}
+                <h3 className="font-medium mb-2">トランザクション一覧</h3>
+                {transactions.map((tx, index) => (
+                  <div
+                    key={index}
+                    className="p-3 border rounded-lg flex items-center justify-between"
+                  >
+                    <div>
+                      <p className="font-medium">
+                        {tx.type === "tip"
+                          ? "投げ銭"
+                          : tx.type === "purchase"
+                          ? "記事購入"
+                          : "その他"}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(tx.timestamp).toLocaleString()}
+                      </p>
+                      {session?.user?.isAdmin && tx.type === "purchase" && (
+                        <p className="text-xs text-blue-600">
+                          購入ユーザー:{" "}
+                          {tx.userId
+                            ? `${purchaserName}さん (ID: ${tx.userId})`
+                            : "不明"}
+                        </p>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium text-green-600">
+                        +{tx.amount} XYM
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate max-w-[200px]">
+                        {tx.transactionHash}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+
+                {/* 合計金額 */}
+                <div className="mt-4 p-3 bg-green-50 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <p className="font-medium">合計XYM</p>
+                    <p className="font-bold text-green-600">
+                      {totalReceivedXym} XYM
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+      {/* 記事投稿者向けXYM収支情報カード */}
+      {session?.user?.id === article.userId && (
         <Card className="bg-card shadow-sm rounded-xl overflow-hidden mb-8">
           <CardHeader>
             <CardTitle className="text-lg flex items-center">
               <DollarSign className="h-5 w-5 mr-2" />
-              XYM取引履歴
+              あなたのXYM収支情報
+              <Badge variant="outline" className="ml-2">
+                投稿者専用
+              </Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {transactions.map((tx, index) => (
-                <div
-                  key={index}
-                  className="p-3 border rounded-lg flex items-center justify-between"
-                >
-                  <div>
-                    <p className="font-medium">
-                      {tx.type === "tip"
-                        ? "投げ銭"
-                        : tx.type === "purchase"
-                        ? "記事購入"
-                        : "その他"}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(tx.timestamp).toLocaleString()}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-medium text-green-600">
-                      +{tx.amount} XYM
-                    </p>
-                    <p className="text-xs text-muted-foreground truncate max-w-[200px]">
-                      {tx.transactionHash}
-                    </p>
-                  </div>
+            <div className="space-y-6">
+              {/* 全体的な収支サマリー */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h4 className="text-sm text-blue-700 font-medium mb-1">
+                    記事購入収入
+                  </h4>
+                  <p className="text-xl font-bold text-blue-800">
+                    {transactions
+                      .filter((tx) => tx.type === "purchase")
+                      .reduce((sum, tx) => sum + tx.amount, 0)}{" "}
+                    XYM
+                  </p>
                 </div>
-              ))}
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <h4 className="text-sm text-green-700 font-medium mb-1">
+                    投げ銭収入
+                  </h4>
+                  <p className="text-xl font-bold text-green-800">
+                    {transactions
+                      .filter((tx) => tx.type === "tip")
+                      .reduce((sum, tx) => sum + tx.amount, 0)}{" "}
+                    XYM
+                  </p>
+                </div>
+                <div className="bg-purple-50 p-4 rounded-lg">
+                  <h4 className="text-sm text-purple-700 font-medium mb-1">
+                    広告収入
+                  </h4>
+                  <p className="text-xl font-bold text-purple-800">
+                    {Math.floor((article.views || 0) * 0.01)} XYM
+                  </p>
+                </div>
+                <div className="bg-amber-50 p-4 rounded-lg">
+                  <h4 className="text-sm text-amber-700 font-medium mb-1">
+                    合計収入
+                  </h4>
+                  <p className="text-xl font-bold text-amber-800">
+                    {totalReceivedXym + Math.floor((article.views || 0) * 0.01)}{" "}
+                    XYM
+                  </p>
+                </div>
+              </div>
 
-              <div className="mt-4 p-3 bg-green-50 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <p className="font-medium">合計受取XYM</p>
-                  <p className="font-bold text-green-600">
-                    {totalReceivedXym} XYM
+              {/* ユーザー全体の収益情報 */}
+              <div className="bg-slate-50 p-4 rounded-lg">
+                <h3 className="font-medium mb-3">全記事のXYM収益</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  あなたが投稿した全ての記事からの収益情報です。
+                </p>
+                <Link href="/dashboard/earnings">
+                  <Button className="w-full">収益情報を確認する</Button>
+                </Link>
+              </div>
+
+              {/* XYM収入履歴グラフ - プレースホルダー */}
+              <div className="border p-4 rounded-lg">
+                <h3 className="font-medium mb-2">XYM収入の推移</h3>
+                <div className="h-40 bg-gray-100 rounded flex items-center justify-center">
+                  <p className="text-muted-foreground">
+                    収入データをグラフで表示予定
                   </p>
                 </div>
               </div>

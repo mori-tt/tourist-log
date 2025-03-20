@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useTopics } from "@/context/TopicsContext";
 import { useArticles } from "@/context/ArticlesContext";
@@ -105,7 +105,6 @@ function getPrefectureRegion(code: string): string {
 
 export default function PrefecturePage() {
   const params = useParams();
-  const router = useRouter();
   const prefectureCode = params.prefectureCode as string;
   const prefecture = getPrefectureByCode(prefectureCode);
 
@@ -215,9 +214,13 @@ export default function PrefecturePage() {
               <Button
                 className="bg-white/90 text-gray-900 hover:bg-white"
                 onClick={() => {
-                  console.log("トップへ戻るボタンがクリックされました");
-                  router.push("/");
+                  // windowオブジェクトの存在を確認してからスクロール処理を実行
+                  if (typeof window !== "undefined") {
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                    console.log("スクロールしました");
+                  }
                 }}
+                id="back-to-top-button"
               >
                 トップへ戻る
               </Button>

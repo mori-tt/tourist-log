@@ -91,22 +91,12 @@ export default function NavItems() {
           <Link
             href="/login"
             className={cn(
-              "px-3 py-2 rounded-md text-sm font-medium transition-colors",
-              pathname === "/login"
-                ? "bg-primary/10 text-primary"
-                : "text-gray-700 hover:bg-gray-100"
+              "px-4 py-2 rounded-md text-sm font-medium transition-colors border border-primary",
+              "bg-primary text-white hover:bg-primary/90"
             )}
           >
-            ログイン
+            ログイン / 新規登録
           </Link>
-          <div className="hidden lg:block">
-            <Link
-              href="/signin"
-              className="ml-2 px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary/90 transition-colors"
-            >
-              新規登録
-            </Link>
-          </div>
         </>
       )}
     </nav>

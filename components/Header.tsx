@@ -172,21 +172,10 @@ export default function Header() {
                     onClick={() => setIsOpen(false)}
                     className={cn(
                       "block px-3 py-2 rounded-md text-base font-medium text-center",
-                      pathname === "/login"
-                        ? "bg-primary/10 text-primary"
-                        : "text-gray-700 hover:bg-gray-100"
+                      "bg-primary text-white hover:bg-primary/90"
                     )}
                   >
-                    ログイン
-                  </Link>
-                  <Link
-                    href="/signin"
-                    onClick={() => setIsOpen(false)}
-                    className={cn(
-                      "block px-3 py-2 mt-2 rounded-md text-base font-medium text-center bg-primary text-white hover:bg-primary/90"
-                    )}
-                  >
-                    新規登録
+                    ログイン / 新規登録
                   </Link>
                 </>
               ) : (
