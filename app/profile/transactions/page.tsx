@@ -603,285 +603,6 @@ const UserTransactions = () => {
     return "広告主"; // 「不明なユーザー」ではなく「広告主」と表示
   };
 
-  // 著者のウォレットアドレスを取得する関数
-  const getAuthorWalletAddress = (transaction: Transaction): string | null => {
-    console.log(
-      `著者ウォレット取得試行: TX ID=${transaction.id}, タイプ=${transaction.type}`
-    );
-
-    // 記事から著者のウォレットアドレスを取得
-    if (transaction.article?.user?.walletAddress) {
-      console.log(
-        `記事から著者ウォレット取得: ${transaction.article.user.walletAddress}`
-      );
-      return transaction.article.user.walletAddress;
-    }
-
-    // authorUserから著者のウォレットアドレスを取得
-    if (transaction.authorUser?.walletAddress) {
-      console.log(
-        `authorUserから著者ウォレット取得: ${transaction.authorUser.walletAddress}`
-      );
-      return transaction.authorUser.walletAddress;
-    }
-
-    // メタデータからauthorIdを取得し、それに関連するユーザーを探す
-    if (transaction.metadata) {
-      let authorId: string | null = null;
-
-      if (typeof transaction.metadata === "object") {
-        if (
-          "authorId" in transaction.metadata &&
-          transaction.metadata.authorId
-        ) {
-          authorId = transaction.metadata.authorId as string;
-        }
-      } else if (typeof transaction.metadata === "string") {
-        try {
-          const meta = JSON.parse(transaction.metadata);
-          if (meta.authorId) {
-            authorId = meta.authorId;
-          }
-        } catch {
-          // パースエラーは無視
-        }
-      }
-
-      // 関連するトランザクションから著者情報を検索
-      if (authorId) {
-        const authorTransaction = transactions.find(
-          (tx) =>
-            (tx.authorUser?.id === authorId && tx.authorUser?.walletAddress) ||
-            (tx.article?.user?.id === authorId &&
-              tx.article?.user?.walletAddress)
-        );
-
-        if (authorTransaction?.authorUser?.walletAddress) {
-          return authorTransaction.authorUser.walletAddress;
-        }
-
-        if (authorTransaction?.article?.user?.walletAddress) {
-          return authorTransaction.article.user.walletAddress;
-        }
-      }
-    }
-
-    // 記事IDがあれば、その記事の著者のウォレットアドレスを探す
-    if (transaction.articleId) {
-      const articleTransaction = transactions.find(
-        (tx) =>
-          tx.articleId === transaction.articleId &&
-          (tx.article?.user?.walletAddress || tx.authorUser?.walletAddress)
-      );
-
-      if (articleTransaction?.article?.user?.walletAddress) {
-        return articleTransaction.article.user.walletAddress;
-      }
-
-      if (articleTransaction?.authorUser?.walletAddress) {
-        return articleTransaction.authorUser.walletAddress;
-      }
-    }
-
-    // トピックが関連付けられている場合、その記事作者を探す
-    if (transaction.topicId) {
-      const topicTransactions = transactions.filter(
-        (tx) => tx.topicId === transaction.topicId && tx.articleId
-      );
-
-      for (const tx of topicTransactions) {
-        if (tx.article?.user?.walletAddress) {
-          return tx.article.user.walletAddress;
-        }
-        if (tx.authorUser?.walletAddress) {
-          return tx.authorUser.walletAddress;
-        }
-      }
-    }
-
-    // 他のトランザクションから同じタイプの取引における著者のウォレットアドレスを探す
-    if (
-      transaction.type === "purchase" ||
-      transaction.type === "tip" ||
-      transaction.type === "receive_tip"
-    ) {
-      const sameTypeTransaction = transactions.find(
-        (tx) =>
-          tx.type === transaction.type &&
-          tx !== transaction &&
-          (tx.article?.user?.walletAddress || tx.authorUser?.walletAddress)
-      );
-
-      if (sameTypeTransaction?.article?.user?.walletAddress) {
-        return sameTypeTransaction.article.user.walletAddress;
-      }
-
-      if (sameTypeTransaction?.authorUser?.walletAddress) {
-        return sameTypeTransaction.authorUser.walletAddress;
-      }
-    }
-
-    // XYMが正の値（受取）の場合は、ユーザー自身かもしれないのでシンボルアドレスを返す
-    if (transaction.xymAmount > 0 && symbolAddress) {
-      return symbolAddress;
-    }
-
-    console.warn(`著者ウォレット取得失敗: TX ID=${transaction.id}`);
-    return "-"; // 空文字ではなく「-」を返す
-  };
-
-  // 購入者のウォレットアドレスを取得する関数
-  const getPurchaserWalletAddress = (
-    transaction: Transaction
-  ): string | null => {
-    // 購入者情報から直接取得
-    if (transaction.purchaserUser?.walletAddress) {
-      return transaction.purchaserUser.walletAddress;
-    }
-
-    // トランザクションユーザーからウォレットアドレスを取得
-    if (transaction.user?.walletAddress) {
-      return transaction.user.walletAddress;
-    }
-
-    // メタデータからpurchaserIdを取得し、それに関連するユーザーを探す
-    if (transaction.metadata) {
-      let purchaserId: string | null = null;
-      let advertiserId: string | null = null;
-
-      if (typeof transaction.metadata === "object") {
-        if (
-          "purchaserId" in transaction.metadata &&
-          transaction.metadata.purchaserId
-        ) {
-          purchaserId = transaction.metadata.purchaserId as string;
-        }
-        if (
-          "advertiserId" in transaction.metadata &&
-          transaction.metadata.advertiserId
-        ) {
-          advertiserId = transaction.metadata.advertiserId as string;
-        }
-      } else if (typeof transaction.metadata === "string") {
-        try {
-          const meta = JSON.parse(transaction.metadata);
-          if (meta.purchaserId) {
-            purchaserId = meta.purchaserId;
-          }
-          if (meta.advertiserId) {
-            advertiserId = meta.advertiserId;
-          }
-        } catch {
-          // パースエラーは無視
-        }
-      }
-
-      // 購入者IDから関連するトランザクションを検索
-      if (purchaserId) {
-        const purchaserTransaction = transactions.find(
-          (tx) =>
-            (tx.purchaserUser?.id === purchaserId &&
-              tx.purchaserUser?.walletAddress) ||
-            (tx.user?.id === purchaserId && tx.user?.walletAddress)
-        );
-
-        if (purchaserTransaction?.purchaserUser?.walletAddress) {
-          return purchaserTransaction.purchaserUser.walletAddress;
-        }
-
-        if (purchaserTransaction?.user?.walletAddress) {
-          return purchaserTransaction.user.walletAddress;
-        }
-      }
-
-      // 広告主IDから関連する取引を検索
-      if (
-        advertiserId &&
-        (transaction.type === "purchase" || transaction.type === "tip")
-      ) {
-        const advertiserTransaction = transactions.find(
-          (tx) =>
-            tx.metadata &&
-            ((typeof tx.metadata === "object" &&
-              "advertiserId" in tx.metadata &&
-              tx.metadata.advertiserId === advertiserId) ||
-              (typeof tx.metadata === "string" &&
-                tx.metadata.includes(advertiserId)))
-        );
-
-        if (advertiserTransaction?.user?.walletAddress) {
-          return advertiserTransaction.user.walletAddress;
-        }
-      }
-    }
-
-    // トピックに関連付けられた広告主のウォレットアドレスを探す
-    if (transaction.topic) {
-      // トピックから広告主IDを取得
-      const advertiserId = transaction.topic.advertiserId;
-
-      if (advertiserId) {
-        // 広告主IDに基づいてユーザー情報を探す
-        const advertiserTransaction = transactions.find(
-          (tx) => tx.user?.id === advertiserId && tx.user?.walletAddress
-        );
-
-        if (advertiserTransaction?.user?.walletAddress) {
-          return advertiserTransaction.user.walletAddress;
-        }
-      }
-
-      // 同じトピックIDの他のトランザクションから広告主情報を探す
-      const topicTransactions = transactions.filter(
-        (tx) => tx.topicId === transaction.topicId
-      );
-
-      for (const tx of topicTransactions) {
-        // トピックの広告主IDからウォレット情報を探す
-        if (tx.topic?.advertiserId) {
-          const adTx = transactions.find(
-            (t) =>
-              t.user?.id === tx.topic?.advertiserId && t.user?.walletAddress
-          );
-          if (adTx?.user?.walletAddress) {
-            return adTx.user.walletAddress;
-          }
-        }
-
-        // 広告主ユーザーの情報を確認
-        if (
-          tx.user?.walletAddress &&
-          (tx.type === "advertisement" || tx.type === ("ad_payment" as string))
-        ) {
-          return tx.user.walletAddress;
-        }
-      }
-    }
-
-    // XYMが負の値（支払い）の場合は、ユーザー自身かもしれないのでシンボルアドレスを返す
-    if (transaction.xymAmount < 0 && symbolAddress) {
-      return symbolAddress;
-    }
-
-    // 同じタイプのトランザクションから関連情報を探す
-    const similarTransaction = transactions.find(
-      (tx) =>
-        tx.type === transaction.type &&
-        tx !== transaction &&
-        (tx.purchaserUser?.walletAddress || tx.user?.walletAddress)
-    );
-
-    if (similarTransaction?.purchaserUser?.walletAddress) {
-      return similarTransaction.purchaserUser.walletAddress;
-    }
-
-    if (similarTransaction?.user?.walletAddress) {
-      return similarTransaction.user.walletAddress;
-    }
-
-    return "-"; // 空文字ではなく「-」を返す
-  };
-
   if (status === "loading" || loading) {
     return (
       <div className="container mx-auto py-8 px-4">
@@ -966,8 +687,6 @@ const UserTransactions = () => {
                 getArticleTitle={getArticleTitle}
                 getAuthorName={getAuthorName}
                 getPurchaserName={getPurchaserName}
-                getAuthorWalletAddress={getAuthorWalletAddress}
-                getPurchaserWalletAddress={getPurchaserWalletAddress}
                 getTransactionAmountClass={getTransactionAmountClass}
               />
             </TabsContent>
@@ -979,8 +698,6 @@ const UserTransactions = () => {
                 getArticleTitle={getArticleTitle}
                 getAuthorName={getAuthorName}
                 getPurchaserName={getPurchaserName}
-                getAuthorWalletAddress={getAuthorWalletAddress}
-                getPurchaserWalletAddress={getPurchaserWalletAddress}
                 getTransactionAmountClass={getTransactionAmountClass}
               />
             </TabsContent>
@@ -992,8 +709,6 @@ const UserTransactions = () => {
                 getArticleTitle={getArticleTitle}
                 getAuthorName={getAuthorName}
                 getPurchaserName={getPurchaserName}
-                getAuthorWalletAddress={getAuthorWalletAddress}
-                getPurchaserWalletAddress={getPurchaserWalletAddress}
                 getTransactionAmountClass={getTransactionAmountClass}
               />
             </TabsContent>
@@ -1010,8 +725,6 @@ const UserTransactions = () => {
                 getArticleTitle={getArticleTitle}
                 getAuthorName={getAuthorName}
                 getPurchaserName={getPurchaserName}
-                getAuthorWalletAddress={getAuthorWalletAddress}
-                getPurchaserWalletAddress={getPurchaserWalletAddress}
                 getTransactionAmountClass={getTransactionAmountClass}
               />
             </TabsContent>
@@ -1089,8 +802,6 @@ interface TransactionTableProps {
   getArticleTitle: (transaction: Transaction) => string;
   getAuthorName: (transaction: Transaction) => string;
   getPurchaserName: (transaction: Transaction) => string;
-  getAuthorWalletAddress: (transaction: Transaction) => string | null;
-  getPurchaserWalletAddress: (transaction: Transaction) => string | null;
   getTransactionAmountClass: (amount: number) => string;
 }
 
@@ -1100,8 +811,6 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
   getArticleTitle,
   getAuthorName,
   getPurchaserName,
-  getAuthorWalletAddress,
-  getPurchaserWalletAddress,
   getTransactionAmountClass,
 }) => {
   return (
@@ -1116,73 +825,64 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {transactions.map((transaction) => {
-          // ウォレットアドレスを取得（表示しないが関数を呼び出して未使用変数エラーを回避）
-          // getAuthorWalletAddress and getPurchaserWalletAddress are called to satisfy linting
-          getAuthorWalletAddress(transaction);
-          getPurchaserWalletAddress(transaction);
-
-          return (
-            <TableRow key={transaction.id}>
-              <TableCell className="hidden md:table-cell font-mono text-xs">
-                {transaction.id}
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center space-x-2">
-                  <TransactionTypeIcon type={transaction.type} />
-                  <span>{getTransactionTypeText(transaction.type)}</span>
+        {transactions.map((transaction) => (
+          <TableRow key={transaction.id}>
+            <TableCell className="hidden md:table-cell font-mono text-xs">
+              {transaction.id}
+            </TableCell>
+            <TableCell>
+              <div className="flex items-center space-x-2">
+                <TransactionTypeIcon type={transaction.type} />
+                <span>{getTransactionTypeText(transaction.type)}</span>
+              </div>
+            </TableCell>
+            <TableCell>
+              <span
+                className={getTransactionAmountClass(transaction.displayAmount)}
+              >
+                {transaction.displayAmount > 0 ? "+" : ""}
+                {transaction.displayAmount} XYM
+              </span>
+            </TableCell>
+            <TableCell>
+              <div className="space-y-1">
+                {transaction.articleId && (
+                  <Link
+                    href={`/article/${transaction.articleId}`}
+                    className="text-sm font-medium hover:underline"
+                  >
+                    {getArticleTitle(transaction)}
+                  </Link>
+                )}
+                <div className="flex flex-col text-xs text-muted-foreground">
+                  <span>送信: {getPurchaserName(transaction)}</span>
+                  <span>受取: {getAuthorName(transaction)}</span>
                 </div>
-              </TableCell>
-              <TableCell>
-                <span
-                  className={getTransactionAmountClass(
-                    transaction.displayAmount
-                  )}
-                >
-                  {transaction.displayAmount > 0 ? "+" : ""}
-                  {transaction.displayAmount} XYM
-                </span>
-              </TableCell>
-              <TableCell>
-                <div className="space-y-1">
-                  {transaction.articleId && (
-                    <Link
-                      href={`/article/${transaction.articleId}`}
-                      className="text-sm font-medium hover:underline"
-                    >
-                      {getArticleTitle(transaction)}
-                    </Link>
-                  )}
-                  <div className="flex flex-col text-xs text-muted-foreground">
-                    <span>送信: {getPurchaserName(transaction)}</span>
-                    <span>受取: {getAuthorName(transaction)}</span>
-                  </div>
-                  {transaction.transactionHash && (
-                    <Link
-                      href={`https://symbol.blockchain-authn.app/transactions/${transaction.transactionHash}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center"
-                    >
-                      <span className="truncate max-w-[140px]">
-                        {transaction.transactionHash}
-                      </span>
-                      <ExternalLink className="h-3 w-3 ml-1" />
-                    </Link>
-                  )}
-                </div>
-              </TableCell>
-              <TableCell className="hidden md:table-cell">
-                <span className="text-xs text-muted-foreground">
-                  {formatDistanceToNow(new Date(transaction.createdAt), {
-                    addSuffix: true,
-                    locale: ja,
-                  })}
-                </span>
-              </TableCell>
-            </TableRow>
-          );
-        })}
+                {transaction.transactionHash && (
+                  <Link
+                    href={`https://symbol.blockchain-authn.app/transactions/${transaction.transactionHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center"
+                  >
+                    <span className="truncate max-w-[140px]">
+                      {transaction.transactionHash}
+                    </span>
+                    <ExternalLink className="h-3 w-3 ml-1" />
+                  </Link>
+                )}
+              </div>
+            </TableCell>
+            <TableCell className="hidden md:table-cell">
+              <span className="text-xs text-muted-foreground">
+                {formatDistanceToNow(new Date(transaction.createdAt), {
+                  addSuffix: true,
+                  locale: ja,
+                })}
+              </span>
+            </TableCell>
+          </TableRow>
+        ))}
       </TableBody>
     </Table>
   );
