@@ -67,9 +67,9 @@ export default function ProfileSettings() {
 
   // ウォレットアドレスのバリデーション
   const validateWalletAddress = (address: string): boolean => {
-    // Symbolアドレスの簡易バリデーション（XXXXXX-XXXXXX-XXXXXX-XXXXXX-XXXXXX-XXXXXX-XXX 形式）
+    // Symbolアドレスの簡易バリデーション - より柔軟な形式チェック
     if (!address) return true; // 空は許可
-    return /^[A-Z0-9]{6}(-[A-Z0-9]{6}){5,6}$/.test(address);
+    return /^[A-Z0-9]{6}(-[A-Z0-9]{6}){5}(-[A-Z0-9]{3,6})?$/.test(address);
   };
 
   // ウォレットアドレス更新処理

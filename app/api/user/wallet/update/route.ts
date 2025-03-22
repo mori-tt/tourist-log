@@ -23,9 +23,10 @@ export async function POST(req: Request) {
     }
 
     // Symbolアドレスの簡易バリデーション
+    // より柔軟な正規表現 - 一般的なSymbolアドレス形式にマッチ
     if (
       walletAddress &&
-      !/^[A-Z0-9]{6}(-[A-Z0-9]{6}){5,6}$/.test(walletAddress)
+      !/^[A-Z0-9]{6}(-[A-Z0-9]{6}){5}(-[A-Z0-9]{3,6})?$/.test(walletAddress)
     ) {
       return NextResponse.json(
         { error: "Invalid Symbol address format" },
