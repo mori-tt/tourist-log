@@ -123,12 +123,12 @@ export default function Footer() {
 
       {/* メインフッター */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div>
           {/* サイト情報 */}
-          <div className="md:col-span-1">
+          <div>
             <Link href="/" className="flex items-center space-x-1">
               <Compass className="h-6 w-6 text-blue-400" />
-              <span className="font-bold text-xl text-primary">
+              <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-primary">
                 Tourist<span className="text-blue-400">Log</span>
               </span>
             </Link>
@@ -138,19 +138,19 @@ export default function Footer() {
           </div>
 
           {/* 地方リスト */}
-          <div className="md:col-span-2">
-            <h3 className="text-sm font-semibold text-gray-900 mb-4">
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900 mb-4 text-center">
               日本の地方から探す
             </h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {regions.map((region) => (
                 <div key={region.name} className="mb-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2 text-center sm:text-left">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2 text-center">
                     {region.name}
                   </h4>
                   <ul className="space-y-1">
                     {region.prefectures.map((pref) => (
-                      <li key={pref.code} className="text-center sm:text-left">
+                      <li key={pref.code} className="text-center">
                         <Link
                           href={`/prefecture/${pref.code}`}
                           className="text-xs text-gray-600 hover:text-primary hover:underline transition-colors"

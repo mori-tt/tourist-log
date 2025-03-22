@@ -32,7 +32,10 @@ export async function POST(req: Request) {
 
     // リクエストボディの取得
     const body = await req.json();
-    const { articleId, amount, message } = body;
+    const { articleId, amount, tipAmount, message } = body;
+
+    // 金額パラメータの統一（amountまたはtipAmountのどちらかを使用）
+    const actualAmount = amount || tipAmount;
 
     // 必須フィールドの検証
     if (!articleId) {
@@ -42,7 +45,7 @@ export async function POST(req: Request) {
       );
     }
 
-    if (!amount || amount <= 0) {
+    if (!actualAmount || actualAmount <= 0) {
       return NextResponse.json(
         { error: "Invalid amount: Amount must be positive" },
         { status: 400 }
@@ -123,7 +126,7 @@ export async function POST(req: Request) {
     );
 
     // 投げ銭送信者の残高が足りない場合はエラー
-    if (senderXymBalance < amount) {
+    if (senderXymBalance < actualAmount) {
       return NextResponse.json(
         { error: "Insufficient XYM balance" },
         { status: 400 }
@@ -131,11 +134,8 @@ export async function POST(req: Request) {
     }
 
     console.log(
-      `投げ銭処理: 送信者=${senderId}, 著者=${authorId}, 記事=${articleId}, 金額=${amount}`
+      `投げ銭処理: 送信者=${senderId}, 著者=${authorId}, 記事=${articleId}, 金額=${actualAmount}`
     );
-
-    // 投げ銭送信者の残高を取得
-    const tipAmount = amount;
 
     // XYM転送処理（広告主から著者へ）
     let txHash = "";
@@ -162,7 +162,7 @@ export async function POST(req: Request) {
       );
 
       // 広告主の残高が足りない場合はエラー
-      if (advertiserXymBalance < tipAmount) {
+      if (advertiserXymBalance < actualAmount) {
         return NextResponse.json(
           { error: "広告主のXYM残高が不足しています" },
           { status: 400 }
@@ -173,12 +173,12 @@ export async function POST(req: Request) {
       const result = await symbolService.sendTransaction(
         advertiser.walletAddress,
         author.walletAddress,
-        tipAmount
+        actualAmount
       );
       txHash = result.txHash;
 
       console.log(
-        `XYM送金成功: 広告主(${advertiser.id})から著者(${author.id})へ ${tipAmount}XYM`
+        `XYM送金成功: 広告主(${advertiser.id})から著者(${author.id})へ ${actualAmount}XYM`
       );
     } catch (error) {
       console.error("XYM送金失敗:", error);
@@ -217,7 +217,7 @@ export async function POST(req: Request) {
     await prisma.transaction.create({
       data: {
         type: "ad_payment" as TransactionType,
-        xymAmount: -tipAmount, // 広告主の視点では支出
+        xymAmount: -actualAmount, // 広告主の視点では支出
         topicId: article.topicId,
         adFee: 0,
         transactionHash: txHash,
@@ -239,7 +239,7 @@ export async function POST(req: Request) {
     await prisma.transaction.create({
       data: {
         type: "ad_revenue" as TransactionType,
-        xymAmount: tipAmount, // 著者の視点では収入
+        xymAmount: actualAmount, // 著者の視点では収入
         topicId: article.topicId,
         adFee: 0,
         transactionHash: txHash,
@@ -263,7 +263,7 @@ export async function POST(req: Request) {
     });
 
     console.log(
-      `著者 ${authorId} への入金トランザクション作成: 金額=${amount}, 支払元=広告主(${advertiser.id}), 記事ID=${articleId}`
+      `著者 ${authorId} への入金トランザクション作成: 金額=${actualAmount}, 支払元=広告主(${advertiser.id}), 記事ID=${articleId}`
     );
 
     // レスポンスを返却

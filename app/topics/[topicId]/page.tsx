@@ -20,6 +20,7 @@ import {
 import { Article } from "@/types/article";
 import ReactMarkdown from "react-markdown";
 import { useToast } from "@/components/ui/use-toast";
+import { ActionButtons } from "@/components/ActionButtons";
 
 export default function TopicPage() {
   const { data: session, status } = useSession();
@@ -180,20 +181,16 @@ export default function TopicPage() {
   // トピック情報のレンダリング
   return (
     <div className="container mx-auto py-8 px-4 max-w-5xl">
+      <div className="mb-8">
+        <ActionButtons session={session} />
+      </div>
       <div className="flex flex-wrap gap-3 mb-8">
-        <Link
-          href="/topics"
-          className="inline-flex items-center px-3 py-2 rounded-md bg-muted text-sm hover:bg-muted/80 transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          トピック一覧へ戻る
-        </Link>
         <Link
           href="/"
           className="inline-flex items-center px-3 py-2 rounded-md bg-muted text-sm hover:bg-muted/80 transition-colors"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
-          ホームへ戻る
+          ホームへ
         </Link>
       </div>
 

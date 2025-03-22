@@ -1,20 +1,52 @@
 "use client";
 
-import React from "react";
-import { useSession } from "next-auth/react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import WalletAddressAlert from "@/components/WalletAddressAlert";
-import { getPrefecturesByRegion, getRegions } from "@/lib/data/prefectures";
+import {
+  getPrefecturesByRegion,
+  getRegions,
+  Prefecture,
+} from "@/lib/data/prefectures";
 import { PrefectureCard } from "@/components/PrefectureCard";
 import { HeartHandshake, Map, Sparkles, Compass, Users } from "lucide-react";
+import { Session } from "next-auth";
+import { ActionButtons } from "@/components/ActionButtons";
 
-export default function HomePage() {
-  const { data: session, status } = useSession();
-  const prefecturesByRegion = getPrefecturesByRegion();
-  const regions = getRegions();
+export default function Home() {
+  const [session, setSession] = useState<Session | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [prefecturesByRegion, setPrefecturesByRegion] = useState<
+    Record<string, Prefecture[]>
+  >({});
+  const [regions, setRegions] = useState<string[]>([]);
 
-  if (status === "loading") {
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        // セッション情報を取得
+        const response = await fetch("/api/auth/session");
+        const data = await response.json();
+        setSession(data);
+
+        // 地域データを取得
+        const prefectures = getPrefecturesByRegion();
+        const regionData = getRegions();
+
+        setPrefecturesByRegion(prefectures);
+        setRegions(regionData);
+      } catch (error) {
+        console.error("データ取得エラー:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchData();
+  }, []);
+
+  if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
@@ -30,77 +62,18 @@ export default function HomePage() {
       {/* ヒーローセクション */}
       <section className="py-16 px-4 text-center">
         <div className="max-w-3xl mx-auto">
-          <h1 className="text-4xl sm:text-5xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">
-            Tourist<span className="text-blue-400">Log</span>
-          </h1>
-          <p className="text-xl text-muted-foreground mb-10 leading-relaxed">
-            日本全国の隠れた魅力を、地元クリエイターの視点で発見しよう
-          </p>
-          {!session && (
-            <div className="flex flex-wrap justify-center gap-4">
-              <Link href="/login">
-                <Button
-                  size="lg"
-                  className="rounded-full px-8 py-6 text-base h-auto"
-                >
-                  サインアップ・ログイン
-                </Button>
-              </Link>
-              <Link href="/topics">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="rounded-full px-8 py-6 text-base h-auto"
-                >
-                  トピック一覧
-                </Button>
-              </Link>
+          <div className="text-center">
+            <div className="flex items-center justify-center mb-2">
+              <Compass className="text-blue-400 h-10 w-10 md:h-12 md:w-12 mr-2" />
+              <h1 className="text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-primary">
+                Tourist<span className="text-blue-400">Log</span>
+              </h1>
             </div>
-          )}
-          {session && (
-            <div className="flex flex-wrap justify-center gap-4 mb-8">
-              {session.user?.isAdvertiser ? (
-                <Link href="/topics/new">
-                  <Button
-                    size="lg"
-                    className="rounded-full px-8 py-6 text-base h-auto bg-green-600 hover:bg-green-700"
-                  >
-                    トピック投稿
-                  </Button>
-                </Link>
-              ) : session.user?.isAdmin ? null : (
-                <Link href="/articles/new">
-                  <Button
-                    size="lg"
-                    className="rounded-full px-8 py-6 text-base h-auto bg-blue-600 hover:bg-blue-700"
-                  >
-                    記事投稿
-                  </Button>
-                </Link>
-              )}
-              <Link href="/topics">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="rounded-full px-8 py-6 text-base h-auto"
-                >
-                  トピック一覧
-                </Button>
-              </Link>
-
-              {session?.user && !session.user.isAdmin && (
-                <Link href="/profile/settings">
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    className="rounded-full px-8 py-6 text-base h-auto bg-blue-50 text-blue-600 border-blue-300 hover:bg-blue-100"
-                  >
-                    Symbolアドレス登録・更新
-                  </Button>
-                </Link>
-              )}
-            </div>
-          )}
+            <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-12 leading-relaxed">
+              日本全国の隠れた魅力を、地元クリエイターの視点で発見しよう
+            </p>
+          </div>
+          <ActionButtons session={session} />
         </div>
       </section>
 
@@ -122,8 +95,7 @@ export default function HomePage() {
       <section id="about" className="py-20 px-4">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <Compass className="h-6 w-6 text-blue-400" />
-            <h2 className="text-3xl font-bold mb-4">
+            <h2 className="text-3xl mb-4 font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-primary">
               Tourist<span className="text-blue-400">Log</span> について
             </h2>
             <p className="text-lg text-muted-foreground max-w-3xl mx-auto">

@@ -57,7 +57,7 @@ export default function Header() {
             <div className="flex items-center">
               <Link href="/" className="flex items-center space-x-1">
                 <Compass className="h-6 w-6 text-blue-400" />
-                <span className="font-bold text-xl text-primary">
+                <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-primary">
                   Tourist<span className="text-blue-400">Log</span>
                 </span>
               </Link>

@@ -135,43 +135,56 @@ export default function ProfileSettings() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      <h1 className="text-2xl font-bold mb-2">プロフィール設定</h1>
-      <p className="text-gray-500 mb-6">アカウント情報やウォレット設定の管理</p>
+    <div className="container mx-auto py-6 sm:py-8 px-4">
+      <h1 className="text-xl sm:text-2xl font-bold mb-1 sm:mb-2">
+        プロフィール設定
+      </h1>
+      <p className="text-sm text-gray-500 mb-4 sm:mb-6">
+        アカウント情報やウォレット設定の管理
+      </p>
 
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Symbol ウォレットアドレス</CardTitle>
-          <CardDescription>
+      <Card className="mb-4 sm:mb-6">
+        <CardHeader className="pb-3 sm:pb-4">
+          <CardTitle className="text-lg sm:text-xl">
+            Symbol ウォレットアドレス
+          </CardTitle>
+          <CardDescription className="text-xs sm:text-sm">
             XYMの受け取りに使用するSymbolブロックチェーンのアドレスです
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleUpdateWalletAddress} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="walletAddress">XYM受取用アドレス</Label>
+          <form
+            onSubmit={handleUpdateWalletAddress}
+            className="space-y-3 sm:space-y-4"
+          >
+            <div className="space-y-1 sm:space-y-2">
+              <Label htmlFor="walletAddress" className="text-sm">
+                XYM受取用アドレス
+              </Label>
               <Input
                 id="walletAddress"
                 value={walletAddress}
                 onChange={(e) => setWalletAddress(e.target.value)}
                 placeholder="例: NCGGLVO-TMKGCN-NBND2F-RDOFRF-3QFPSG-BAGIPH-NPZ"
-                className="font-mono"
+                className="font-mono text-xs sm:text-sm"
               />
               <p className="text-xs text-muted-foreground">
                 投げ銭や記事購入の収益を受け取るために必要です。記事投稿で収益を得るには設定してください。
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 pt-1">
               <Button
                 type="submit"
+                size="sm"
+                className="sm:text-sm sm:px-4 sm:py-2 h-8 sm:h-9"
                 disabled={
                   saveLoading || walletAddress === originalWalletAddress
                 }
               >
                 {saveLoading ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
                     更新中...
                   </>
                 ) : (
@@ -180,14 +193,19 @@ export default function ProfileSettings() {
               </Button>
 
               {walletAddress && (
-                <Button variant="outline" size="icon" asChild className="ml-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  asChild
+                  className="h-8 w-8 sm:h-9 sm:w-9"
+                >
                   <Link
                     href={`https://symbol.blockchain-authn.app/accounts/${walletAddress}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     title="Symbolエクスプローラーで確認"
                   >
-                    <ExternalLink className="h-4 w-4" />
+                    <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4" />
                   </Link>
                 </Button>
               )}
@@ -196,8 +214,13 @@ export default function ProfileSettings() {
         </CardContent>
       </Card>
 
-      <div className="mt-4">
-        <Button variant="outline" onClick={() => router.back()}>
+      <div className="mt-3 sm:mt-4">
+        <Button
+          variant="outline"
+          size="sm"
+          className="sm:text-sm h-8 sm:h-9"
+          onClick={() => router.back()}
+        >
           戻る
         </Button>
       </div>

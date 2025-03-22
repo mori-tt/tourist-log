@@ -1,10 +1,9 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useArticles } from "@/context/ArticlesContext";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useTopics } from "@/context/TopicsContext";
 import { useForm } from "react-hook-form";
@@ -33,6 +32,9 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
+import { Session } from "next-auth";
+import { ActionButtons } from "@/components/ActionButtons";
+import { use } from "react";
 
 // 取引履歴の型定義
 interface Transaction {
@@ -60,16 +62,21 @@ interface Transaction {
   metadata?: string;
 }
 
-export default function ArticleDetailPage() {
-  const { data: session, status } = useSession();
+// クライアントコンポーネントでのパラメータの処理方法を変更
+export default function ArticlePage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = use(params);
   const router = useRouter();
-  const params = useParams();
-  const articleId = Number(params.id);
+  const articleId = Number(id);
   const { articles } = useArticles();
   const { topics } = useTopics();
   const { setValue } = useForm<ArticleFormData>();
   const { toast } = useToast();
   const [isDeleting, setIsDeleting] = useState(false);
+  const [session, setSession] = useState<Session | null>(null);
 
   const [tipDialogOpen, setTipDialogOpen] = useState(false);
   const [tipAmount, setTipAmount] = useState(10);
@@ -93,6 +100,21 @@ export default function ArticleDetailPage() {
   const [currentUserHasPurchased, setCurrentUserHasPurchased] =
     useState<boolean>(false);
   const [advertisers, setAdvertisers] = useState<{ [key: string]: string }>({});
+
+  // セッション情報を取得
+  useEffect(() => {
+    async function fetchSession() {
+      try {
+        const response = await fetch("/api/auth/session");
+        const data = await response.json();
+        setSession(data);
+      } catch (error) {
+        console.error("セッション取得エラー:", error);
+      }
+    }
+
+    fetchSession();
+  }, []);
 
   // ユーザー名を取得する関数
   const fetchUserName = async (userId: number | string) => {
@@ -369,7 +391,7 @@ export default function ArticleDetailPage() {
         body: JSON.stringify({
           senderWalletPrivateKey: walletPrivateKey,
           recipientAddress: article?.user?.walletAddress,
-          tipAmount,
+          amount: tipAmount,
           topicId: article?.topicId,
           articleId: article?.id,
           senderId: session?.user?.id,
@@ -383,6 +405,11 @@ export default function ArticleDetailPage() {
         throw new Error(data.error || "投げ銭の送信に失敗しました");
       }
 
+      // 成功メッセージを表示
+      setSuccess("投げ銭が正常に送信されました！");
+      setTipDialogOpen(false);
+
+      /* トランザクションハッシュの確認処理は現在のレスポンス形式に合わないため削除
       // トランザクションの状態を確認
       const transactionHash = data.blockchain.transactionInfo.hash;
       let confirmed = false;
@@ -416,6 +443,7 @@ export default function ArticleDetailPage() {
           "トランザクションの確認がタイムアウトしました。Symbol Explorerで確認してください。"
         );
       }
+      */
     } catch (error: unknown) {
       if (error instanceof Error) {
         setError(error.message);
@@ -534,7 +562,7 @@ export default function ArticleDetailPage() {
     }
 
     // ログインしていない場合はアクセス不可
-    if (status !== "authenticated" || !session) {
+    if (session === null) {
       return false;
     }
 
@@ -549,7 +577,7 @@ export default function ArticleDetailPage() {
       session.user.id === article.purchasedBy ||
       session.user.isAdvertiser
     );
-  }, [article, session, status]);
+  }, [article, session]);
 
   // 記事が見つからない場合
   if (!article) {
@@ -576,6 +604,9 @@ export default function ArticleDetailPage() {
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-5xl">
+      <div className="mb-8">
+        <ActionButtons session={session} />
+      </div>
       <div className="flex flex-wrap gap-3 mb-8">
         <Link
           href={`/topics/${article.topicId}`}

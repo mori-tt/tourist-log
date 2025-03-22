@@ -4,13 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
@@ -113,7 +107,9 @@ const UserTransactions = () => {
         }
 
         // ユーザーが広告主かどうかをセット
-        setIsUserAdvertiser(userData.isAdvertiser || false);
+        if (userData.isAdvertiser) {
+          setIsUserAdvertiser(userData.isAdvertiser);
+        }
       } catch (error) {
         console.error("ユーザープロフィール取得エラー:", error);
       }
@@ -140,13 +136,15 @@ const UserTransactions = () => {
         const apiAdvertiserFlag = data.isAdvertiser || false;
 
         // 状態を更新
-        setIsUserAdvertiser(apiAdvertiserFlag);
+        if (apiAdvertiserFlag) {
+          setIsUserAdvertiser(apiAdvertiserFlag);
+        }
 
-        // 直接APIレスポンスの広告主フラグを使用してトランザクションを処理
+        // isUserAdvertiser状態変数を使用してトランザクションを処理（直接APIレスポンスのフラグは使わない）
         const processedTx = processTransactionsWithFlag(
           data.transactions,
           session.user.id,
-          apiAdvertiserFlag
+          isUserAdvertiser
         );
 
         setTransactions(processedTx);
@@ -170,7 +168,7 @@ const UserTransactions = () => {
     if (status === "authenticated") {
       fetchTransactions();
     }
-  }, [status, session]);
+  }, [status, session, isUserAdvertiser]);
 
   // 処理済みのトランザクションから受取額と支払額を計算
   const calculateTotals = (transactions: TransactionWithDisplayAmount[]) => {
@@ -405,181 +403,195 @@ const UserTransactions = () => {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      <h1 className="text-2xl font-bold mb-6">マイXYM</h1>
-      <p className="text-gray-500 mb-6">
-        あなたのXYM残高と取引履歴を確認できます
+    <div className="container mx-auto py-6 sm:py-8 px-4">
+      <h1 className="text-xl sm:text-2xl font-bold mb-1 sm:mb-2">取引履歴</h1>
+      <p className="text-xs sm:text-sm text-gray-500 mb-4 sm:mb-6">
+        Symbolブロックチェーン上のXYM取引履歴を確認できます
       </p>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-normal text-muted-foreground">
-              総受取XYM
-            </CardTitle>
-            <CardDescription className="text-sm">
-              これまでに受け取ったXYMの合計額
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalReceivedXym} XYM</div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
+        <Card className="bg-green-50">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-sm sm:text-base font-medium text-green-700">
+                受け取り合計
+              </h2>
+              <p className="text-base sm:text-lg font-bold text-green-800">
+                {totalReceivedXym} XYM
+              </p>
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-normal text-muted-foreground">
-              総支払いXYM
-            </CardTitle>
-            <CardDescription className="text-sm">
-              これまでに支払ったXYMの合計額
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalPaidXym} XYM</div>
+        <Card className="bg-red-50">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-sm sm:text-base font-medium text-red-700">
+                支払い合計
+              </h2>
+              <p className="text-base sm:text-lg font-bold text-red-800">
+                {totalPaidXym} XYM
+              </p>
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-normal text-muted-foreground">
-              現在の残高
-            </CardTitle>
-            <CardDescription className="text-sm">
-              受取額から支払額を差し引いた額
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{currentBalance} XYM</div>
+        <Card className="bg-blue-50">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-sm sm:text-base font-medium text-blue-700">
+                収支残高
+              </h2>
+              <p className="text-base sm:text-lg font-bold text-blue-800">
+                {currentBalance} XYM
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      <div>
-        <h2 className="text-xl font-semibold mb-4">取引履歴</h2>
-
-        {transactions.length === 0 ? (
-          <EmptyState
-            title="取引履歴がありません"
-            description="まだXYMの取引がありません。記事を購入したり、投げ銭を送ったりすると、ここに表示されます。"
-            icon={<Wallet className="h-12 w-12 text-gray-400" />}
-          />
-        ) : (
-          <Tabs defaultValue="all" className="mb-4">
-            <TabsList>
-              <TabsTrigger value="all">すべて</TabsTrigger>
-              <TabsTrigger value="income">受取履歴</TabsTrigger>
-              <TabsTrigger value="expenses">支払い履歴</TabsTrigger>
-              <TabsTrigger value="ad-related">広告履歴</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="all">
-              <TransactionTable
-                transactions={transactions}
-                getTransactionTypeText={getTransactionTypeText}
-                getArticleTitle={getArticleTitle}
-                getAuthorName={getAuthorName}
-                getPurchaserName={getPurchaserName}
-                getTransactionAmountClass={getTransactionAmountClass}
-              />
-            </TabsContent>
-
-            <TabsContent value="income">
-              <TransactionTable
-                transactions={transactions.filter((tx) => tx.displayAmount > 0)}
-                getTransactionTypeText={getTransactionTypeText}
-                getArticleTitle={getArticleTitle}
-                getAuthorName={getAuthorName}
-                getPurchaserName={getPurchaserName}
-                getTransactionAmountClass={getTransactionAmountClass}
-              />
-            </TabsContent>
-
-            <TabsContent value="expenses">
-              <TransactionTable
-                transactions={transactions.filter((tx) => tx.displayAmount < 0)}
-                getTransactionTypeText={getTransactionTypeText}
-                getArticleTitle={getArticleTitle}
-                getAuthorName={getAuthorName}
-                getPurchaserName={getPurchaserName}
-                getTransactionAmountClass={getTransactionAmountClass}
-              />
-            </TabsContent>
-
-            <TabsContent value="ad-related">
-              <TransactionTable
-                transactions={transactions.filter(
-                  (tx) =>
-                    tx.type === "advertisement" ||
-                    tx.type === "ad_payment" ||
-                    tx.type === "ad_revenue"
-                )}
-                getTransactionTypeText={getTransactionTypeText}
-                getArticleTitle={getArticleTitle}
-                getAuthorName={getAuthorName}
-                getPurchaserName={getPurchaserName}
-                getTransactionAmountClass={getTransactionAmountClass}
-              />
-            </TabsContent>
-          </Tabs>
-        )}
-      </div>
-
-      {/* Symbolアドレス情報 */}
-      <Card className="mt-6">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base font-medium">
-            Symbolアドレス
-          </CardTitle>
-          <CardDescription>あなたのXYM受取用アドレス</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center">
-            {symbolAddress ? (
-              <>
-                <span className="text-sm font-mono truncate">
+      {symbolAddress && (
+        <Card className="mb-4 sm:mb-6">
+          <CardHeader className="pb-2 sm:pb-3">
+            <CardTitle className="text-base sm:text-lg flex items-center">
+              <Wallet className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+              Symbol ウォレット情報
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col sm:flex-row sm:items-center text-xs sm:text-sm gap-2">
+              <span className="font-medium">アドレス:</span>
+              <div className="w-full overflow-hidden">
+                <code className="bg-gray-100 p-1 sm:p-2 rounded flex-1 block font-mono text-xs truncate">
                   {symbolAddress}
-                </span>
-                <Button variant="ghost" size="sm" asChild className="ml-2">
-                  <Link
-                    href={`https://symbol.blockchain-authn.app/accounts/${symbolAddress}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                  </Link>
-                </Button>
-              </>
-            ) : (
-              <span className="text-sm text-muted-foreground">未設定</span>
-            )}
-          </div>
-          <div className="mt-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => router.push("/profile/settings")}
-            >
-              {symbolAddress ? "アドレスを変更する" : "アドレスを設定する"}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* 広告主情報 */}
-      {isUserAdvertiser && (
-        <div className="mb-4 p-3 mt-4 bg-yellow-50 rounded-lg border border-yellow-200">
-          <p className="text-sm font-medium text-yellow-800">
-            広告主アカウント
-          </p>
-          <p className="text-xs text-yellow-700 mt-1 mb-2">
-            あなたは広告主として登録されています
-          </p>
-          <Button variant="outline" size="sm" onClick={refreshData}>
-            画面を更新
-          </Button>
-        </div>
+                </code>
+              </div>
+              <Link
+                href={`https://symbol.blockchain-authn.app/accounts/${symbolAddress}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:text-blue-800 inline-flex items-center whitespace-nowrap"
+              >
+                <span className="mr-1">確認</span>
+                <ExternalLink className="h-3 w-3" />
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
       )}
+
+      <Tabs defaultValue="all" className="mb-4 sm:mb-6">
+        <TabsList className="grid w-full grid-cols-3 mb-2 sm:mb-4 h-auto p-1">
+          <TabsTrigger
+            value="all"
+            className="text-xs sm:text-sm py-1 sm:py-2 h-auto data-[state=active]:font-medium"
+          >
+            全ての取引
+          </TabsTrigger>
+          <TabsTrigger
+            value="income"
+            className="text-xs sm:text-sm py-1 sm:py-2 h-auto data-[state=active]:font-medium"
+          >
+            受け取り
+          </TabsTrigger>
+          <TabsTrigger
+            value="expenses"
+            className="text-xs sm:text-sm py-1 sm:py-2 h-auto data-[state=active]:font-medium"
+          >
+            支払い
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="all" className="mt-0">
+          {transactions.length > 0 ? (
+            <div className="rounded-md border overflow-hidden">
+              <div className="overflow-x-auto">
+                <TransactionTable
+                  transactions={transactions}
+                  getTransactionTypeText={getTransactionTypeText}
+                  getArticleTitle={getArticleTitle}
+                  getAuthorName={getAuthorName}
+                  getPurchaserName={getPurchaserName}
+                  getTransactionAmountClass={getTransactionAmountClass}
+                />
+              </div>
+            </div>
+          ) : (
+            <EmptyState
+              title="取引履歴がありません"
+              description="XYM取引が発生するとここに表示されます"
+              icon={<Wallet className="h-12 w-12 text-gray-300" />}
+            />
+          )}
+        </TabsContent>
+
+        <TabsContent value="income" className="mt-0">
+          {transactions.filter((tx) => tx.displayAmount > 0).length > 0 ? (
+            <div className="rounded-md border overflow-hidden">
+              <div className="overflow-x-auto">
+                <TransactionTable
+                  transactions={transactions.filter(
+                    (tx) => tx.displayAmount > 0
+                  )}
+                  getTransactionTypeText={getTransactionTypeText}
+                  getArticleTitle={getArticleTitle}
+                  getAuthorName={getAuthorName}
+                  getPurchaserName={getPurchaserName}
+                  getTransactionAmountClass={getTransactionAmountClass}
+                />
+              </div>
+            </div>
+          ) : (
+            <EmptyState
+              title="受け取り履歴がありません"
+              description="XYMを受け取ると、ここに表示されます"
+              icon={<Wallet className="h-12 w-12 text-gray-300" />}
+            />
+          )}
+        </TabsContent>
+
+        <TabsContent value="expenses" className="mt-0">
+          {transactions.filter((tx) => tx.displayAmount < 0).length > 0 ? (
+            <div className="rounded-md border overflow-hidden">
+              <div className="overflow-x-auto">
+                <TransactionTable
+                  transactions={transactions.filter(
+                    (tx) => tx.displayAmount < 0
+                  )}
+                  getTransactionTypeText={getTransactionTypeText}
+                  getArticleTitle={getArticleTitle}
+                  getAuthorName={getAuthorName}
+                  getPurchaserName={getPurchaserName}
+                  getTransactionAmountClass={getTransactionAmountClass}
+                />
+              </div>
+            </div>
+          ) : (
+            <EmptyState
+              title="支払い履歴がありません"
+              description="XYMを支払うと、ここに表示されます"
+              icon={<Wallet className="h-12 w-12 text-gray-300" />}
+            />
+          )}
+        </TabsContent>
+      </Tabs>
+
+      <div className="flex justify-end">
+        <Button
+          variant="outline"
+          size="sm"
+          className="text-xs sm:text-sm h-8 sm:h-9"
+          onClick={() => router.push("/profile")}
+        >
+          プロフィールに戻る
+        </Button>
+      </div>
+
+      <div className="flex justify-end mb-4">
+        <Button variant="outline" onClick={refreshData} size="sm">
+          更新
+        </Button>
+      </div>
     </div>
   );
 };
@@ -603,72 +615,70 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
   getTransactionAmountClass,
 }) => {
   return (
-    <Table>
+    <Table className="min-w-full">
       <TableHeader>
-        <TableRow>
-          <TableHead className="hidden md:table-cell">ID</TableHead>
-          <TableHead>タイプ</TableHead>
-          <TableHead>金額</TableHead>
-          <TableHead>詳細</TableHead>
-          <TableHead className="hidden md:table-cell">日時</TableHead>
+        <TableRow className="bg-muted/50">
+          <TableHead className="whitespace-nowrap text-xs w-24 sm:w-auto">
+            取引タイプ
+          </TableHead>
+          <TableHead className="whitespace-nowrap text-xs hidden sm:table-cell">
+            詳細
+          </TableHead>
+          <TableHead className="whitespace-nowrap text-xs">日時</TableHead>
+          <TableHead className="whitespace-nowrap text-xs text-right">
+            金額
+          </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {transactions.map((transaction) => (
-          <TableRow key={transaction.id}>
-            <TableCell className="hidden md:table-cell font-mono text-xs">
-              {transaction.id}
-            </TableCell>
-            <TableCell>
-              <div className="flex items-center space-x-2">
-                <TransactionTypeIcon type={transaction.type} />
-                <span>{getTransactionTypeText(transaction.type)}</span>
+          <TableRow key={transaction.id} className="hover:bg-muted/30">
+            <TableCell className="font-medium text-xs sm:text-sm py-2 sm:py-3">
+              <div className="flex items-center">
+                <TransactionTypeIcon
+                  type={transaction.type}
+                  className="mr-1 sm:mr-2 h-4 w-4 flex-shrink-0"
+                />
+                <span className="truncate">
+                  {getTransactionTypeText(transaction.type)}
+                </span>
               </div>
             </TableCell>
-            <TableCell>
-              <span
-                className={getTransactionAmountClass(transaction.displayAmount)}
-              >
-                {transaction.displayAmount > 0 ? "+" : ""}
-                {transaction.displayAmount} XYM
-              </span>
-            </TableCell>
-            <TableCell>
-              <div className="space-y-1">
-                {transaction.articleId && (
-                  <Link
-                    href={`/article/${transaction.articleId}`}
-                    className="text-sm font-medium hover:underline"
-                  >
+            <TableCell className="hidden sm:table-cell text-xs">
+              {transaction.articleId ? (
+                <div className="space-y-1">
+                  <div>
+                    <span className="font-medium">記事:</span>{" "}
                     {getArticleTitle(transaction)}
-                  </Link>
-                )}
-                <div className="flex flex-col text-xs text-muted-foreground">
-                  <span>送信: {getPurchaserName(transaction)}</span>
-                  <span>受取: {getAuthorName(transaction)}</span>
+                  </div>
+                  <div>
+                    <span className="font-medium">著者:</span>{" "}
+                    {getAuthorName(transaction)}
+                  </div>
+                  {transaction.type === "purchase" && (
+                    <div>
+                      <span className="font-medium">購入者:</span>{" "}
+                      {getPurchaserName(transaction)}
+                    </div>
+                  )}
                 </div>
-                {transaction.transactionHash && (
-                  <Link
-                    href={`https://symbol.blockchain-authn.app/transactions/${transaction.transactionHash}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center"
-                  >
-                    <span className="truncate max-w-[140px]">
-                      {transaction.transactionHash}
-                    </span>
-                    <ExternalLink className="h-3 w-3 ml-1" />
-                  </Link>
-                )}
-              </div>
+              ) : (
+                <span className="text-muted-foreground">-</span>
+              )}
             </TableCell>
-            <TableCell className="hidden md:table-cell">
-              <span className="text-xs text-muted-foreground">
-                {formatDistanceToNow(new Date(transaction.createdAt), {
-                  addSuffix: true,
-                  locale: ja,
-                })}
-              </span>
+            <TableCell className="text-xs whitespace-nowrap">
+              {formatDistanceToNow(new Date(transaction.createdAt), {
+                addSuffix: true,
+                locale: ja,
+              })}
+            </TableCell>
+            <TableCell
+              className={`text-right font-medium text-xs sm:text-sm ${getTransactionAmountClass(
+                transaction.displayAmount
+              )}`}
+            >
+              {transaction.displayAmount > 0 ? "+" : ""}
+              {transaction.displayAmount} XYM
             </TableCell>
           </TableRow>
         ))}
