@@ -152,7 +152,7 @@ function SearchContent() {
           <div className="space-y-4">
             {articleResults.map((article) => (
               <Link
-                href={`/articles/${article.id}`}
+                href={`/article/${article.id}`}
                 key={article.id}
                 className="block p-4 rounded-lg border hover:border-primary hover:shadow-md transition-all"
               >

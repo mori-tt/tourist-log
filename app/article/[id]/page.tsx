@@ -626,18 +626,21 @@ export default function ArticleDetailPage() {
 
           {/* 記事価格を全ユーザーに表示 */}
           <div className="mt-6 bg-amber-50 border border-amber-200 rounded-lg p-4">
-            <div className="flex items-center text-amber-800">
-              <DollarSign className="h-5 w-5 flex-shrink-0 mr-2" />
-              <p className="font-medium">記事価格: {article.xymPrice} XYM</p>
+            <div className="flex flex-col text-amber-800">
+              <div className="flex items-center">
+                <DollarSign className="h-5 w-5 flex-shrink-0 mr-2" />
+                <p className="font-medium">記事価格: {article.xymPrice} XYM</p>
+              </div>
               {/* 購入ステータスの表示部分 */}
               {article.isPurchased && (
-                <div className="mt-2 text-sm text-muted-foreground">
-                  <span>
-                    購入済み（
+                <div className="mt-2 flex items-center text-sm ml-7">
+                  <span className="text-green-700 font-medium">購入済み</span>
+                  <span className="text-muted-foreground ml-1">
+                    （
                     {(() => {
                       // 明示的な購入者情報がある場合はそれを表示
                       if (purchaserName && purchaserName !== "不明なユーザー") {
-                        return `${purchaserName}さん）`;
+                        return `${purchaserName}さん`;
                       }
 
                       // 購入者不明の場合はトピック情報から広告主を特定
@@ -655,18 +658,18 @@ export default function ArticleDetailPage() {
                               advertiserName &&
                               advertiserName !== "不明なユーザー"
                             ) {
-                              return `（${advertiserName}）`;
+                              return `${advertiserName}`;
                             }
                             // 広告主名が取得できない場合はトピック名を表示
-                            return `（トピック「${topic.title}」の広告主）`;
+                            return `トピック「${topic.title}」の広告主`;
                           }
                         }
                       }
 
                       // それでもわからない場合は「トピック購入者」と表示
-                      return `（トピック${article.topicId}の購入者）`;
+                      return `トピック${article.topicId}の購入者`;
                     })()}
-                    {purchaseDate && ` ${purchaseDate}`}
+                    ）{purchaseDate && ` ${purchaseDate}`}
                   </span>
                 </div>
               )}

@@ -22,11 +22,33 @@ import {
 } from "@/components/ui/table";
 import { formatDistanceToNow } from "date-fns";
 import { ja } from "date-fns/locale";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Wallet } from "lucide-react";
 import Link from "next/link";
 import { Transaction } from "@/types";
 import TransactionTypeIcon from "@/components/TransactionTypeIcon";
 import EmptyState from "@/components/EmptyState";
+
+// メタデータから値を安全に取得するユーティリティ関数
+const getMetadataValue = (
+  metadata: string | Record<string, unknown> | null,
+  key: string
+): string | null => {
+  if (!metadata) return null;
+
+  if (typeof metadata === "string") {
+    try {
+      const parsed = JSON.parse(metadata);
+      return typeof parsed[key] === "string" ? parsed[key] : null;
+    } catch {
+      // パースエラーの場合は null
+      return null;
+    }
+  } else if (typeof metadata === "object") {
+    return typeof metadata[key] === "string" ? (metadata[key] as string) : null;
+  }
+
+  return null;
+};
 
 // Add interface for Transaction with display amount
 interface TransactionWithDisplayAmount extends Transaction {
@@ -45,16 +67,20 @@ const UserTransactions = () => {
   const [currentBalance, setCurrentBalance] = useState(0);
   const [symbolAddress, setSymbolAddress] = useState("");
   const [isUserAdvertiser, setIsUserAdvertiser] = useState(false);
-  const [userSymbolAddress, setUserSymbolAddress] = useState<string | null>(
-    null
-  );
 
   // セッションが無効な場合はログインページにリダイレクト
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/auth/signin");
+      return;
     }
-  }, [status, router]);
+
+    // 管理者の場合はダッシュボードにリダイレクト
+    if (session?.user?.isAdmin) {
+      router.push("/dashboard");
+      return;
+    }
+  }, [status, router, session]);
 
   // トランザクションの金額表示クラスを取得
   const getTransactionAmountClass = (amount: number) => {
@@ -80,21 +106,14 @@ const UserTransactions = () => {
         if (!response.ok) throw new Error("Failed to fetch user profile");
 
         const userData = await response.json();
-        console.log("ユーザープロフィール情報:", userData);
 
         // ユーザーのウォレットアドレスをセット
         if (userData.walletAddress) {
-          setUserSymbolAddress(userData.walletAddress);
-          setSymbolAddress(userData.walletAddress); // Set the symbol address
+          setSymbolAddress(userData.walletAddress);
         }
 
         // ユーザーが広告主かどうかをセット
         setIsUserAdvertiser(userData.isAdvertiser || false);
-        console.log(
-          `ユーザー ${session.user.id} は広告主か: ${
-            userData.isAdvertiser || false
-          }`
-        );
       } catch (error) {
         console.error("ユーザープロフィール取得エラー:", error);
       }
@@ -116,11 +135,9 @@ const UserTransactions = () => {
         if (!response.ok) throw new Error("Failed to fetch transactions");
 
         const data = await response.json();
-        console.log("取得したトランザクション:", data.transactions);
 
         // APIレスポンスから広告主フラグを取得
         const apiAdvertiserFlag = data.isAdvertiser || false;
-        console.log(`APIからの広告主フラグ: ${apiAdvertiserFlag}`);
 
         // 状態を更新
         setIsUserAdvertiser(apiAdvertiserFlag);
@@ -168,7 +185,6 @@ const UserTransactions = () => {
       }
     });
 
-    console.log(`計算した受取XYM: ${received}, 支払いXYM: ${paid}`);
     return { received, paid };
   };
 
@@ -178,10 +194,6 @@ const UserTransactions = () => {
     userId: string,
     isAdvertiser: boolean
   ): TransactionWithDisplayAmount[] => {
-    console.log(
-      `処理開始（直接フラグ使用）: ユーザーID=${userId}, 広告主=${isAdvertiser}`
-    );
-
     return transactions.map((transaction) => {
       // 支払いタイプのトランザクション（支払いに関連するもの）
       const paymentTypes = ["purchase", "tip", "ad_payment", "advertisement"];
@@ -201,21 +213,13 @@ const UserTransactions = () => {
       // デフォルト値を設定
       let displayAmount = transaction.xymAmount;
 
-      console.log(
-        `処理中: ID=${transaction.id}, タイプ=${transaction.type}, 金額=${transaction.xymAmount}, 広告主=${isAdvertiser}`
-      );
-
       // 1. 著者として受け取る場合は常にプラス表示（最優先）
       if (isAuthorReceiving) {
         displayAmount = Math.abs(transaction.xymAmount);
-        console.log(`[著者受取] ID=${transaction.id}, 金額=${displayAmount}`);
       }
       // 2. 広告主の場合、支払いタイプのトランザクションは全てマイナス表示（著者受取を除く）
       else if (isAdvertiser && isPaymentType) {
         displayAmount = -Math.abs(transaction.xymAmount);
-        console.log(
-          `[広告主支払い] ID=${transaction.id}, 金額=${displayAmount}`
-        );
       }
       // 3. 通常ユーザーで支払いタイプかつユーザーIDが一致する場合はマイナス表示
       else if (
@@ -224,14 +228,10 @@ const UserTransactions = () => {
         transaction.userId === userId
       ) {
         displayAmount = -Math.abs(transaction.xymAmount);
-        console.log(
-          `[一般ユーザー支払い] ID=${transaction.id}, 金額=${displayAmount}`
-        );
       }
       // 4. 受取タイプの取引はプラス表示
       else if (isReceiptType) {
         displayAmount = Math.abs(transaction.xymAmount);
-        console.log(`[受取] ID=${transaction.id}, 金額=${displayAmount}`);
       }
 
       // 最終チェック: 広告主かつ支払いタイプなのに金額がプラスになっている場合は修正
@@ -242,9 +242,6 @@ const UserTransactions = () => {
         displayAmount > 0
       ) {
         displayAmount = -Math.abs(displayAmount);
-        console.log(
-          `[広告主最終チェック] ID=${transaction.id}, 修正後=${displayAmount}`
-        );
       }
 
       return {
@@ -270,20 +267,9 @@ const UserTransactions = () => {
     }
 
     // メタデータから記事タイトルを取得
-    if (transaction.metadata && typeof transaction.metadata === "object") {
-      if (
-        "articleTitle" in transaction.metadata &&
-        transaction.metadata.articleTitle
-      ) {
-        return transaction.metadata.articleTitle as string;
-      }
-    } else if (typeof transaction.metadata === "string") {
-      try {
-        const meta = JSON.parse(transaction.metadata);
-        if (meta.articleTitle) return meta.articleTitle;
-      } catch {
-        // パースエラーは無視
-      }
+    const articleTitle = getMetadataValue(transaction.metadata, "articleTitle");
+    if (articleTitle) {
+      return articleTitle;
     }
 
     return "不明な記事";
@@ -291,95 +277,34 @@ const UserTransactions = () => {
 
   // 種類から説明テキストを取得
   const getTransactionTypeText = (type: string) => {
-    switch (type) {
-      case "purchase":
-        return "記事購入";
-      case "tip":
-        return "投げ銭";
-      case "receive_tip":
-        return "投げ銭受取";
-      case "ad_payment":
-        return "広告費支払い";
-      case "ad_revenue":
-        return "広告収入";
-      case "advertisement":
-        return "広告掲載";
-      default:
-        return type;
-    }
+    const typeTextMap: Record<string, string> = {
+      purchase: "記事購入",
+      tip: "投げ銭",
+      receive_tip: "投げ銭受取",
+      ad_payment: "広告費支払い",
+      ad_revenue: "広告収入",
+      advertisement: "広告掲載",
+    };
+
+    return typeTextMap[type] || type;
   };
 
   // 著者名を取得
   const getAuthorName = (transaction: Transaction) => {
-    console.log(
-      `著者名取得試行: TX ID=${transaction.id}, 記事ID=${transaction.articleId}, タイプ=${transaction.type}`
-    );
-
     // 記事オブジェクトの中に著者情報がある場合（最優先）
     if (transaction.article?.user?.name) {
-      console.log(`記事から著者情報取得: ${transaction.article.user.name}`);
       return transaction.article.user.name;
     }
 
     // 著者情報がauthorUserにある場合
     if (transaction.authorUser?.name) {
-      console.log(`authorUserから著者情報取得: ${transaction.authorUser.name}`);
       return transaction.authorUser.name;
     }
 
     // メタデータから著者名を取得
-    if (transaction.metadata && typeof transaction.metadata === "object") {
-      if (
-        "authorName" in transaction.metadata &&
-        transaction.metadata.authorName
-      ) {
-        console.log(
-          `メタデータから著者情報取得 (オブジェクト): ${transaction.metadata.authorName}`
-        );
-        return transaction.metadata.authorName as string;
-      }
-      // 記事IDがある場合は該当する記事の著者情報を使用
-      if (
-        "articleId" in transaction.metadata &&
-        transaction.metadata.articleId
-      ) {
-        const articleId = Number(transaction.metadata.articleId);
-        const matchingTransaction = transactions.find(
-          (t) => t.articleId === articleId && t.article?.user?.name
-        );
-        if (matchingTransaction?.article?.user?.name) {
-          console.log(
-            `関連記事から著者情報取得: ${matchingTransaction.article.user.name}`
-          );
-          return matchingTransaction.article.user.name;
-        }
-      }
-    } else if (typeof transaction.metadata === "string") {
-      try {
-        const meta = JSON.parse(transaction.metadata);
-        if (meta.authorName) {
-          console.log(
-            `メタデータから著者情報取得 (文字列): ${meta.authorName}`
-          );
-          return meta.authorName;
-        }
-
-        // 記事IDがある場合は該当する記事の著者情報を使用
-        if (meta.articleId) {
-          const articleId = Number(meta.articleId);
-          const matchingTransaction = transactions.find(
-            (t) => t.articleId === articleId && t.article?.user?.name
-          );
-          if (matchingTransaction?.article?.user?.name) {
-            console.log(
-              `関連記事から著者情報取得: ${matchingTransaction.article.user.name}`
-            );
-            return matchingTransaction.article.user.name;
-          }
-        }
-      } catch (e) {
-        console.error(`メタデータのパースに失敗: ${e}`);
-      }
+    const authorName = getMetadataValue(transaction.metadata, "authorName");
+    if (authorName) {
+      return authorName;
     }
 
     // 記事IDがある場合、別のトランザクションから記事情報を検索
@@ -399,85 +324,12 @@ const UserTransactions = () => {
       }
     }
 
-    // トピックIDから記事の著者情報を検索
-    if (transaction.topicId) {
-      // 同じトピックの他の記事から著者を検索
-      const topicArticleTx = transactions.find(
-        (t) =>
-          t.topicId === transaction.topicId &&
-          t.articleId &&
-          (t.article?.user?.name || t.authorUser?.name)
-      );
-
-      if (topicArticleTx?.article?.user?.name) {
-        return topicArticleTx.article.user.name;
-      }
-
-      if (topicArticleTx?.authorUser?.name) {
-        return topicArticleTx.authorUser.name;
-      }
-    }
-
-    // トランザクションタイプから著者を推測
-    if (
-      transaction.type === "purchase" ||
-      transaction.type === "tip" ||
-      transaction.type === "receive_tip"
-    ) {
-      // 同タイプの他のトランザクションから著者情報を検索
-      const similarTx = transactions.find(
-        (t) =>
-          t.type === transaction.type &&
-          t !== transaction &&
-          (t.article?.user?.name || t.authorUser?.name)
-      );
-
-      if (similarTx?.article?.user?.name) {
-        return similarTx.article.user.name;
-      }
-
-      if (similarTx?.authorUser?.name) {
-        return similarTx.authorUser.name;
-      }
-    }
-
     // セッションユーザーの情報を使用（特に受取トランザクションの場合）
     if (transaction.xymAmount > 0) {
       return "あなた";
     }
 
-    console.warn(
-      `著者情報取得失敗: TX ID=${transaction.id}, 記事ID=${transaction.articleId}`
-    );
-    return "記事作者"; // 「不明な著者」ではなく「記事作者」と表示
-  };
-
-  // トピックに関連付けられた広告主情報を取得
-  const getAdvertiserFromTopic = (
-    topic: {
-      id?: number;
-      title?: string;
-      advertiserId?: string;
-      advertiser?: {
-        id?: string;
-        name?: string;
-      };
-    } | null
-  ): string | null => {
-    if (!topic) return null;
-
-    // advertiserId経由で広告主の名前を取得
-    if (topic.advertiserId) {
-      const advertiserTx = transactions.find(
-        (tx) => tx.user?.id === topic.advertiserId && tx.user?.name
-      );
-
-      if (advertiserTx?.user?.name) {
-        return advertiserTx.user.name;
-      }
-    }
-
-    return null;
+    return "記事作者";
   };
 
   // 購入者名を取得
@@ -487,95 +339,52 @@ const UserTransactions = () => {
       return "あなた";
     }
 
-    // 購入者情報がtransaction.purchaserUserに直接あるケース
+    // 購入者情報が直接存在する場合
     if (transaction.purchaserUser?.name) {
       return transaction.purchaserUser.name;
     }
 
-    // トランザクションのユーザー情報を使用するケース
+    // トランザクションのユーザー情報を使用
     if (transaction.user?.name) {
       return transaction.user.name;
     }
 
-    // メタデータから購入者名または広告主名を抽出するケース
-    if (transaction.metadata && typeof transaction.metadata === "object") {
-      if (
-        "purchaserName" in transaction.metadata &&
-        transaction.metadata.purchaserName
-      ) {
-        return transaction.metadata.purchaserName as string;
-      }
-      // 記事購入や投げ銭の場合、広告主が購入者である可能性が高い
-      if (
-        (transaction.type === "purchase" || transaction.type === "tip") &&
-        "advertiserName" in transaction.metadata &&
-        transaction.metadata.advertiserName
-      ) {
-        return transaction.metadata.advertiserName as string;
-      }
-    } else if (typeof transaction.metadata === "string") {
+    // メタデータから購入者名または広告主名を取得
+    if (transaction.metadata) {
       try {
-        const meta = JSON.parse(transaction.metadata);
-        if (meta.purchaserName) return meta.purchaserName;
+        const metaData =
+          typeof transaction.metadata === "string"
+            ? JSON.parse(transaction.metadata)
+            : transaction.metadata;
 
-        // 記事購入や投げ銭の場合、広告主が購入者である可能性が高い
+        if (metaData.purchaserName) {
+          return metaData.purchaserName;
+        }
+
+        // 記事購入や投げ銭の場合、広告主名を使用
         if (
           (transaction.type === "purchase" || transaction.type === "tip") &&
-          meta.advertiserName
+          metaData.advertiserName
         ) {
-          return meta.advertiserName;
+          return metaData.advertiserName;
         }
       } catch {
         // パースエラーは無視
       }
     }
 
-    // トピックに関連付けられた広告主が購入者の可能性がある
-    if (transaction.type === "purchase" || transaction.type === "tip") {
-      // トピック情報から広告主名を直接取得
-      if (transaction.topic) {
-        // advertiserId経由で広告主情報を検索
-        if (transaction.topic.advertiserId) {
-          const advertiserTx = transactions.find(
-            (tx) =>
-              tx.user?.id === transaction.topic?.advertiserId && tx.user?.name
-          );
-
-          if (advertiserTx?.user?.name) {
-            return advertiserTx.user.name;
-          }
-        }
-      }
-
-      // getAdvertiserFromTopicを利用
-      const advertiserName = getAdvertiserFromTopic(
-        transaction.topic
-          ? {
-              id: transaction.topic.id,
-              title: transaction.topic.title,
-              advertiserId: transaction.topic.advertiserId,
-            }
-          : null
+    // トピックから広告主情報を取得（記事購入や投げ銭の場合）
+    if (
+      (transaction.type === "purchase" || transaction.type === "tip") &&
+      transaction.topic?.advertiserId
+    ) {
+      // 同じトピックの他のトランザクションから広告主を検索
+      const advertiserTx = transactions.find(
+        (tx) => tx.user?.id === transaction.topic?.advertiserId && tx.user?.name
       );
-      if (advertiserName) {
-        return advertiserName;
-      }
 
-      // 同じトピックの他のトランザクションから広告主を探す
-      if (transaction.topicId) {
-        const topicTxs = transactions.filter(
-          (tx) => tx.topicId === transaction.topicId
-        );
-
-        // 広告タイプのトランザクションを探す
-        const adTx = topicTxs.find(
-          (tx) =>
-            tx.type === "advertisement" || tx.type === ("ad_payment" as string)
-        );
-
-        if (adTx?.user?.name) {
-          return adTx.user.name;
-        }
+      if (advertiserTx?.user?.name) {
+        return advertiserTx.user.name;
       }
     }
 
@@ -584,23 +393,7 @@ const UserTransactions = () => {
       return "あなた";
     }
 
-    // 同タイプの他のトランザクションから購入者情報を検索
-    const similarTx = transactions.find(
-      (t) =>
-        t.type === transaction.type &&
-        t !== transaction &&
-        (t.purchaserUser?.name || t.user?.name)
-    );
-
-    if (similarTx?.purchaserUser?.name) {
-      return similarTx.purchaserUser.name;
-    }
-
-    if (similarTx?.user?.name) {
-      return similarTx.user.name;
-    }
-
-    return "広告主"; // 「不明なユーザー」ではなく「広告主」と表示
+    return "広告主";
   };
 
   if (status === "loading" || loading) {
@@ -669,7 +462,7 @@ const UserTransactions = () => {
           <EmptyState
             title="取引履歴がありません"
             description="まだXYMの取引がありません。記事を購入したり、投げ銭を送ったりすると、ここに表示されます。"
-            icon="wallet"
+            icon={<Wallet className="h-12 w-12 text-gray-400" />}
           />
         ) : (
           <Tabs defaultValue="all" className="mb-4">
@@ -718,8 +511,8 @@ const UserTransactions = () => {
                 transactions={transactions.filter(
                   (tx) =>
                     tx.type === "advertisement" ||
-                    tx.type === ("ad_payment" as string) ||
-                    tx.type === ("ad_revenue" as string)
+                    tx.type === "ad_payment" ||
+                    tx.type === "ad_revenue"
                 )}
                 getTransactionTypeText={getTransactionTypeText}
                 getArticleTitle={getArticleTitle}
@@ -742,51 +535,47 @@ const UserTransactions = () => {
         </CardHeader>
         <CardContent>
           <div className="flex items-center">
-            <span className="text-sm font-mono truncate">
-              {symbolAddress || "未設定"}
-            </span>
-            {symbolAddress && (
-              <Button variant="ghost" size="sm" asChild className="ml-2">
-                <Link
-                  href={`https://symbol.blockchain-authn.app/accounts/${symbolAddress}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                </Link>
-              </Button>
+            {symbolAddress ? (
+              <>
+                <span className="text-sm font-mono truncate">
+                  {symbolAddress}
+                </span>
+                <Button variant="ghost" size="sm" asChild className="ml-2">
+                  <Link
+                    href={`https://symbol.blockchain-authn.app/accounts/${symbolAddress}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </Link>
+                </Button>
+              </>
+            ) : (
+              <span className="text-sm text-muted-foreground">未設定</span>
             )}
           </div>
-          {!symbolAddress && (
+          <div className="mt-2">
             <Button
               variant="outline"
               size="sm"
-              className="mt-2"
               onClick={() => router.push("/profile/settings")}
             >
-              アドレスを設定する
+              {symbolAddress ? "アドレスを変更する" : "アドレスを設定する"}
             </Button>
-          )}
+          </div>
         </CardContent>
       </Card>
 
-      {/* ユーザープロフィール表示部分 */}
-      {userSymbolAddress && (
-        <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-          <p className="text-sm text-gray-600">Symbol アドレス</p>
-          <p className="font-mono text-xs break-all">{userSymbolAddress}</p>
-        </div>
-      )}
-
+      {/* 広告主情報 */}
       {isUserAdvertiser && (
-        <div className="mb-4 p-2 bg-yellow-50 rounded-lg border border-yellow-200">
-          <p className="text-sm text-yellow-700">広告主アカウント</p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-2"
-            onClick={refreshData}
-          >
+        <div className="mb-4 p-3 mt-4 bg-yellow-50 rounded-lg border border-yellow-200">
+          <p className="text-sm font-medium text-yellow-800">
+            広告主アカウント
+          </p>
+          <p className="text-xs text-yellow-700 mt-1 mb-2">
+            あなたは広告主として登録されています
+          </p>
+          <Button variant="outline" size="sm" onClick={refreshData}>
             画面を更新
           </Button>
         </div>

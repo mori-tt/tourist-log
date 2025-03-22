@@ -156,19 +156,32 @@ export default function AdminUsersPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>ユーザー</TableHead>
-                  <TableHead>メールアドレス</TableHead>
-                  <TableHead>ウォレットアドレス</TableHead>
+                  <TableHead className="hidden md:table-cell">
+                    メールアドレス
+                  </TableHead>
+                  <TableHead className="hidden md:table-cell">
+                    ウォレットアドレス
+                  </TableHead>
                   <TableHead>広告主</TableHead>
                   <TableHead>管理者</TableHead>
-                  <TableHead>登録日</TableHead>
+                  <TableHead className="hidden md:table-cell">登録日</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredUsers.map((user) => (
                   <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.name}</TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>
+                    <TableCell className="font-medium">
+                      <div>
+                        <div>{user.name}</div>
+                        <div className="text-xs text-muted-foreground md:hidden">
+                          {user.email}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      {user.email}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
                       {user.walletAddress ? (
                         <div className="truncate max-w-[200px]">
                           {user.walletAddress}
@@ -190,7 +203,7 @@ export default function AdminUsersPage() {
                           )
                         }
                       >
-                        <SelectTrigger className="w-24">
+                        <SelectTrigger className="w-20 sm:w-24">
                           <SelectValue placeholder="広告主" />
                         </SelectTrigger>
                         <SelectContent>
@@ -206,7 +219,7 @@ export default function AdminUsersPage() {
                           changeUserRole(user.id, "isAdmin", value === "true")
                         }
                       >
-                        <SelectTrigger className="w-24">
+                        <SelectTrigger className="w-20 sm:w-24">
                           <SelectValue placeholder="管理者" />
                         </SelectTrigger>
                         <SelectContent>
@@ -215,7 +228,7 @@ export default function AdminUsersPage() {
                         </SelectContent>
                       </Select>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden md:table-cell">
                       {new Date(user.createdAt).toLocaleDateString("ja-JP")}
                     </TableCell>
                   </TableRow>

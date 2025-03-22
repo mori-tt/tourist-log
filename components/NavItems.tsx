@@ -15,8 +15,12 @@ export default function NavItems() {
     { href: "/", label: "ホーム" },
     { href: "/topics", label: "トピック" },
     { href: "/#about", label: "About" },
-    { href: "/profile/transactions", label: "MY XYM取引履歴" },
   ];
+
+  // MY XYM取引履歴は管理者以外に表示
+  if (!session?.user?.isAdmin) {
+    navLinks.push({ href: "/profile/transactions", label: "MY XYM取引履歴" });
+  }
 
   // 追加の管理者リンク
   if (session?.user?.isAdmin) {
