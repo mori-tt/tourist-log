@@ -44,7 +44,7 @@ const getMetadataValue = (
   return null;
 };
 
-// Add interface for Transaction with display amount
+// 表示用トランザクションインターフェース
 interface TransactionWithDisplayAmount extends Transaction {
   displayAmount: number;
 }
@@ -107,9 +107,7 @@ const UserTransactions = () => {
         }
 
         // ユーザーが広告主かどうかをセット
-        if (userData.isAdvertiser) {
-          setIsUserAdvertiser(userData.isAdvertiser);
-        }
+        setIsUserAdvertiser(userData.isAdvertiser || false);
       } catch (error) {
         console.error("ユーザープロフィール取得エラー:", error);
       }
@@ -132,19 +130,21 @@ const UserTransactions = () => {
 
         const data = await response.json();
 
-        // APIレスポンスから広告主フラグを取得
-        const apiAdvertiserFlag = data.isAdvertiser || false;
-
-        // 状態を更新
-        if (apiAdvertiserFlag) {
-          setIsUserAdvertiser(apiAdvertiserFlag);
+        // APIから広告主フラグも取得（既存の状態がなければ更新）
+        if (data.isAdvertiser !== undefined) {
+          setIsUserAdvertiser(data.isAdvertiser);
         }
 
-        // isUserAdvertiser状態変数を使用してトランザクションを処理（直接APIレスポンスのフラグは使わない）
-        const processedTx = processTransactionsWithFlag(
+        // 取得した広告主フラグを使用してトランザクションを処理
+        const currentUserAdvertiserStatus =
+          data.isAdvertiser !== undefined
+            ? data.isAdvertiser
+            : isUserAdvertiser;
+
+        const processedTx = processTransactions(
           data.transactions,
           session.user.id,
-          isUserAdvertiser
+          currentUserAdvertiserStatus
         );
 
         setTransactions(processedTx);
@@ -186,8 +186,8 @@ const UserTransactions = () => {
     return { received, paid };
   };
 
-  // 広告主フラグを直接渡して使用するトランザクション処理関数
-  const processTransactionsWithFlag = (
+  // トランザクション処理関数（シンプル化）
+  const processTransactions = (
     transactions: Transaction[],
     userId: string,
     isAdvertiser: boolean
@@ -199,47 +199,46 @@ const UserTransactions = () => {
       const receiptTypes = ["receive_tip", "ad_revenue"];
 
       // 記事の著者がユーザー自身かどうか
-      const isAuthorReceiving =
-        transaction.articleId &&
-        transaction.article?.userId === userId &&
-        (transaction.type === "purchase" || transaction.type === "tip");
+      const isAuthor =
+        transaction.articleId && transaction.article?.userId === userId;
+
+      // 自分自身のトランザクションかどうか
+      const isOwnTransaction = transaction.userId === userId;
 
       // トランザクションの種類に基づいて分類
-      const isPaymentType = paymentTypes.includes(transaction.type as string);
-      const isReceiptType = receiptTypes.includes(transaction.type as string);
+      const isPaymentType = paymentTypes.includes(transaction.type);
+      const isReceiptType = receiptTypes.includes(transaction.type);
 
-      // デフォルト値を設定
-      let displayAmount = transaction.xymAmount;
+      // 表示金額の計算ロジック（シンプル化）
+      let displayAmount = 0;
 
-      // 1. 著者として受け取る場合は常にプラス表示（最優先）
-      if (isAuthorReceiving) {
-        displayAmount = Math.abs(transaction.xymAmount);
-      }
-      // 2. 広告主の場合、支払いタイプのトランザクションは全てマイナス表示（著者受取を除く）
-      else if (isAdvertiser && isPaymentType) {
-        displayAmount = -Math.abs(transaction.xymAmount);
-      }
-      // 3. 通常ユーザーで支払いタイプかつユーザーIDが一致する場合はマイナス表示
-      else if (
-        !isAdvertiser &&
-        isPaymentType &&
-        transaction.userId === userId
-      ) {
-        displayAmount = -Math.abs(transaction.xymAmount);
-      }
-      // 4. 受取タイプの取引はプラス表示
-      else if (isReceiptType) {
-        displayAmount = Math.abs(transaction.xymAmount);
-      }
-
-      // 最終チェック: 広告主かつ支払いタイプなのに金額がプラスになっている場合は修正
+      // ケース1: 著者として記事に関するトランザクションを受け取る場合
       if (
-        isAdvertiser &&
-        isPaymentType &&
-        !isAuthorReceiving &&
-        displayAmount > 0
+        isAuthor &&
+        (transaction.type === "purchase" || transaction.type === "tip")
       ) {
-        displayAmount = -Math.abs(displayAmount);
+        displayAmount = Math.abs(transaction.xymAmount);
+      }
+      // ケース2: 広告主として支払いタイプのトランザクションを行う場合
+      else if (isAdvertiser && isOwnTransaction && isPaymentType) {
+        displayAmount = -Math.abs(transaction.xymAmount);
+      }
+      // ケース3: 一般ユーザーとして支払いタイプのトランザクションを行う場合
+      else if (!isAdvertiser && isOwnTransaction && isPaymentType) {
+        displayAmount = -Math.abs(transaction.xymAmount);
+      }
+      // ケース4: 受取タイプのトランザクションを受け取る場合
+      else if (isOwnTransaction && isReceiptType) {
+        displayAmount = Math.abs(transaction.xymAmount);
+      }
+      // ケース5: その他のケース - 金額をそのまま使用
+      else {
+        displayAmount = transaction.xymAmount;
+
+        // 支払い側のトランザクションは負の値に
+        if (isOwnTransaction && transaction.xymAmount > 0 && isPaymentType) {
+          displayAmount = -displayAmount;
+        }
       }
 
       return {
