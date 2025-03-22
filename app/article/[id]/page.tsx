@@ -931,35 +931,142 @@ export default function ArticleDetailPage() {
                       <p className="text-sm text-muted-foreground">
                         {new Date(tx.createdAt).toLocaleString()}
                       </p>
-                      {tx.userId && (
-                        <p className="text-xs text-blue-600 font-semibold">
-                          <span className="font-bold">
-                            {tx.type === "purchase"
-                              ? "購入者"
-                              : tx.type === "tip"
-                              ? "送金者"
-                              : tx.type === "receive_tip"
-                              ? "受取者"
-                              : "ユーザー"}
-                            :
-                          </span>{" "}
-                          <span className="underline">
-                            {tx.user?.name || purchaserName || "不明"}
-                          </span>
-                        </p>
-                      )}
-                      {tx.article?.user && tx.type !== "receive_tip" && (
-                        <p className="text-xs text-green-600 font-semibold">
-                          <span className="font-bold">著者:</span>{" "}
-                          <span className="underline">
-                            {tx.article.user.name || "不明"}
-                          </span>
-                        </p>
-                      )}
+
+                      {/* 送金者の表示（常に表示） */}
+                      <p className="text-xs text-blue-600 font-semibold">
+                        <span className="font-bold">XYM送信者:</span>{" "}
+                        <span className="underline">
+                          {(() => {
+                            // トピックオーナー自身の場合（自分が広告主でトピックオーナーの場合）
+                            if (
+                              isTopicOwner &&
+                              (tx.type === "purchase" || tx.type === "tip")
+                            ) {
+                              // 自分自身が送信者の場合、ユーザー名を表示
+                              const myName = session?.user?.name || "広告主";
+                              return myName;
+                            }
+
+                            // 記事購入者と投げ銭の送信者は、まずトピックの広告主情報から特定を試みる
+                            if (
+                              (tx.type === "purchase" || tx.type === "tip") &&
+                              article?.topicId
+                            ) {
+                              const topic = topics.find(
+                                (t) => t.id === article.topicId
+                              );
+                              if (topic && topic.advertiserId) {
+                                const advertiserName =
+                                  advertisers[topic.advertiserId];
+                                if (
+                                  advertiserName &&
+                                  advertiserName !== "不明なユーザー"
+                                ) {
+                                  return advertiserName;
+                                }
+                              }
+                            }
+
+                            // 送信者情報がある場合
+                            if (tx.userId && tx.user?.name) {
+                              return tx.user.name;
+                            }
+
+                            // 購入者の場合
+                            if (
+                              tx.type === "purchase" &&
+                              purchaserName &&
+                              purchaserName !== "不明なユーザー"
+                            ) {
+                              return purchaserName;
+                            }
+
+                            // メタデータから送信者情報を取得
+                            if (
+                              tx.metadata &&
+                              typeof tx.metadata === "string"
+                            ) {
+                              try {
+                                const meta = JSON.parse(tx.metadata);
+                                if (meta.senderName) {
+                                  return meta.senderName;
+                                }
+                              } catch {
+                                // パース失敗は無視
+                              }
+                            }
+
+                            // トピックから広告主情報を再度チェック（冗長だが念のため）
+                            if (article?.topicId) {
+                              // トピック情報から広告主を特定
+                              const topic = topics.find(
+                                (t) => t.id === article.topicId
+                              );
+                              if (topic && topic.title) {
+                                return `${topic.title}の広告主`;
+                              }
+                            }
+
+                            return "不明なユーザー";
+                          })()}
+                        </span>
+                      </p>
+
+                      {/* 受取者の表示（常に表示） */}
+                      <p className="text-xs text-green-600 font-semibold">
+                        <span className="font-bold">XYM受取者:</span>{" "}
+                        <span className="underline">
+                          {(() => {
+                            // 受取者情報が明示的にある場合
+                            if (tx.article?.user?.name) {
+                              return tx.article.user.name;
+                            }
+
+                            // 記事の著者が受取者の場合
+                            if (
+                              (tx.type === "purchase" ||
+                                tx.type === "tip" ||
+                                tx.type === "receive_tip") &&
+                              authorName
+                            ) {
+                              return authorName;
+                            }
+
+                            // メタデータから受取者情報を取得
+                            if (
+                              tx.metadata &&
+                              typeof tx.metadata === "string"
+                            ) {
+                              try {
+                                const meta = JSON.parse(tx.metadata);
+                                if (meta.recipientName) {
+                                  return meta.recipientName;
+                                }
+                              } catch {
+                                // パース失敗は無視
+                              }
+                            }
+
+                            return "不明";
+                          })()}
+                        </span>
+                      </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-medium text-green-600">
-                        {tx.isReceived ? "+" : "-"}
+                      <p
+                        className={`font-medium ${
+                          tx.isReceived ||
+                          (session?.user?.id === article.userId &&
+                            (tx.type === "purchase" || tx.type === "tip"))
+                            ? "text-green-600"
+                            : "text-red-600"
+                        }`}
+                      >
+                        {tx.isReceived ||
+                        (session?.user?.id === article.userId &&
+                          (tx.type === "purchase" || tx.type === "tip"))
+                          ? "+"
+                          : "-"}
                         {tx.xymAmount} XYM
                       </p>
                       <p className="text-xs text-muted-foreground truncate max-w-[200px]">
@@ -973,9 +1080,18 @@ export default function ArticleDetailPage() {
                 <div className="mt-4 p-3 bg-green-50 rounded-lg">
                   <div className="flex items-center justify-between">
                     <p className="font-medium">合計XYM</p>
-                    <p className="font-bold text-green-600">
-                      {totalReceivedXym} XYM
-                    </p>
+                    {/* 広告主/トピックオーナー向けと著者向けで表示を分ける */}
+                    {session?.user?.id === article.userId ||
+                    session?.user?.isAdmin ? (
+                      <p className="font-bold text-green-600">
+                        {totalReceivedXym} XYM
+                      </p>
+                    ) : (
+                      <p className="font-bold text-red-600">
+                        {/* 広告主視点では支払った金額なのでマイナス表示 */}-
+                        {totalReceivedXym} XYM
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1038,19 +1154,102 @@ export default function ArticleDetailPage() {
                 <p className="text-sm text-muted-foreground mb-4">
                   あなたが投稿した全ての記事からの収益情報です。
                 </p>
-                <Link href="/profile">
+                <Link href="/profile/transactions">
                   <Button className="w-full">収益情報を確認する</Button>
                 </Link>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-              {/* XYM収入履歴グラフ - プレースホルダー */}
-              <div className="border p-4 rounded-lg">
-                <h3 className="font-medium mb-2">XYM収入の推移</h3>
-                <div className="h-40 bg-gray-100 rounded flex items-center justify-center">
-                  <p className="text-muted-foreground">
-                    収入データをグラフで表示予定
+      {/* 広告主向けXYM収支情報カード */}
+      {session?.user?.isAdvertiser && isTopicOwner && (
+        <Card className="bg-card shadow-sm rounded-xl overflow-hidden mb-8">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center">
+              <DollarSign className="h-5 w-5 mr-2" />
+              あなたのXYM収支情報
+              <Badge
+                variant="outline"
+                className="ml-2 bg-blue-50 text-blue-700"
+              >
+                広告主専用
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              {/* 広告主向け収支サマリー */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="bg-red-50 p-4 rounded-lg">
+                  <h4 className="text-sm text-red-700 font-medium mb-1">
+                    記事購入支出
+                  </h4>
+                  <p className="text-xl font-bold text-red-800">
+                    {
+                      -transactions
+                        .filter((tx) => tx.type === "purchase")
+                        .reduce((sum, tx) => sum + tx.xymAmount, 0)
+                    }{" "}
+                    XYM
                   </p>
                 </div>
+                <div className="bg-orange-50 p-4 rounded-lg">
+                  <h4 className="text-sm text-orange-700 font-medium mb-1">
+                    投げ銭支出
+                  </h4>
+                  <p className="text-xl font-bold text-orange-800">
+                    {
+                      -transactions
+                        .filter((tx) => tx.type === "tip")
+                        .reduce((sum, tx) => sum + tx.xymAmount, 0)
+                    }{" "}
+                    XYM
+                  </p>
+                </div>
+                <div className="bg-amber-50 p-4 rounded-lg">
+                  <h4 className="text-sm text-amber-700 font-medium mb-1">
+                    合計支出
+                  </h4>
+                  <p className="text-xl font-bold text-amber-800">
+                    {-totalReceivedXym} XYM
+                  </p>
+                </div>
+              </div>
+
+              {/* トピック情報 */}
+              {relatedTopic && (
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h3 className="font-medium mb-2">関連トピック情報</h3>
+                  <p className="text-sm mb-2">
+                    <span className="font-semibold">トピック名:</span>{" "}
+                    {relatedTopic.title}
+                  </p>
+                  <p className="text-sm mb-3">
+                    <span className="font-semibold">記事数:</span>{" "}
+                    {
+                      articles.filter((a) => a.topicId === relatedTopic.id)
+                        .length
+                    }
+                  </p>
+                  <Link href={`/topics/${relatedTopic.id}`}>
+                    <Button variant="outline" size="sm" className="w-full">
+                      トピック詳細へ
+                    </Button>
+                  </Link>
+                </div>
+              )}
+
+              {/* 広告主全体の支出情報リンク */}
+              <div className="bg-slate-50 p-4 rounded-lg">
+                <h3 className="font-medium mb-3">全トピックのXYM支出</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  あなたが広告主として立てた全てのトピックの支出情報です。
+                </p>
+                <Link href="/profile/transactions">
+                  <Button className="w-full">支出情報を確認する</Button>
+                </Link>
               </div>
             </div>
           </CardContent>

@@ -27,11 +27,6 @@ export default function NavItems() {
     navLinks.push({ href: "/admin", label: "管理者ダッシュボード" });
   }
 
-  // 追加の広告主リンク
-  if (session?.user?.isAdvertiser) {
-    navLinks.push({ href: "/advertiser", label: "広告主ダッシュボード" });
-  }
-
   return (
     <nav className="flex-1 flex items-center justify-end">
       <div className="flex flex-wrap gap-2 items-center w-full max-w-[800px] justify-end">
@@ -69,6 +64,14 @@ export default function NavItems() {
                 >
                   プロフィール
                 </Link>
+                {session?.user && !session.user.isAdmin && (
+                  <Link
+                    href="/profile/settings"
+                    className="block px-4 py-2 text-sm hover:bg-gray-100 font-medium text-blue-600"
+                  >
+                    Symbolアドレス登録・更新
+                  </Link>
+                )}
                 {session?.user?.isAdmin && (
                   <Link
                     href="/admin/users"

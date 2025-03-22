@@ -87,6 +87,18 @@ export default function HomePage() {
                   トピック一覧
                 </Button>
               </Link>
+
+              {session?.user && !session.user.isAdmin && (
+                <Link href="/profile/settings">
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="rounded-full px-8 py-6 text-base h-auto bg-blue-50 text-blue-600 border-blue-300 hover:bg-blue-100"
+                  >
+                    Symbolアドレス登録・更新
+                  </Button>
+                </Link>
+              )}
             </div>
           )}
         </div>

@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { Instagram, ChevronUp, Compass } from "lucide-react";
+import { ChevronUp, Compass } from "lucide-react";
 
 // 日本の地方と都道府県コードを定義
 const regions = [
@@ -135,15 +135,6 @@ export default function Footer() {
             <p className="text-sm text-gray-600 mb-4">
               日本の地方や都道府県に関する情報や記事を提供するプラットフォームです。
             </p>
-            <div className="flex space-x-4">
-              <a
-                href="#"
-                className="text-gray-400 hover:text-primary transition-colors"
-                aria-label="Instagram"
-              >
-                <Instagram size={20} />
-              </a>
-            </div>
           </div>
 
           {/* 地方リスト */}

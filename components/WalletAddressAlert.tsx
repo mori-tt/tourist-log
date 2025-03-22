@@ -55,13 +55,16 @@ export default function WalletAddressAlert({
   return (
     <Alert variant="destructive" className={className}>
       <AlertCircle className="h-4 w-4" />
-      <AlertTitle>ウォレットアドレスが設定されていません</AlertTitle>
+      <AlertTitle>Symbolアドレスが設定されていません</AlertTitle>
       <AlertDescription>
-        Symbolウォレットアドレスを設定しないと、投げ銭の受け取りや記事購入、広告費の支払いができません。
+        Symbolアドレスを設定しないと、投げ銭の受け取りや記事購入、広告費の支払いができません。
         <div className="mt-2">
-          <Link href="/profile">
-            <Button variant="outline" size="sm">
-              プロフィール設定へ
+          <Link href="/profile/settings">
+            <Button
+              size="sm"
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              Symbolアドレスを登録・更新する
             </Button>
           </Link>
         </div>

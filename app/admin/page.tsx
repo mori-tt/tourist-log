@@ -71,7 +71,7 @@ export default function AdminDashboard() {
         <h1 className="text-2xl font-bold">管理者ダッシュボード</h1>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {menuItems.map((item) => (
           <Link key={item.href} href={item.href}>
             <Card className="h-full hover:border-primary hover:shadow-md transition-all">
