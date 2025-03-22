@@ -141,11 +141,6 @@ export default function PrefecturePage() {
   const [advertiserNames, setAdvertiserNames] = useState<{
     [key: string]: string;
   }>({});
-  // PV統計の状態を追加
-  const [articleViews, setArticleViews] = useState<{ [key: number]: number }>(
-    {}
-  );
-  // 投げ銭トータルの状態を追加
   const [articleTips, setArticleTips] = useState<{ [key: number]: number }>({});
 
   // ユーザーロールを取得
@@ -154,9 +149,9 @@ export default function PrefecturePage() {
   // ユーザー名を非同期に取得する関数
   const fetchUserName = async (userId: string) => {
     try {
-      const res = await fetch(`/api/user/${userId}`);
-      if (res.ok) {
-        const userData = await res.json();
+      const response = await fetch(`/api/users/${userId}`);
+      if (response.ok) {
+        const userData = await response.json();
         return userData.name || "名前未設定";
       }
     } catch (error) {
@@ -165,24 +160,7 @@ export default function PrefecturePage() {
     return "不明なユーザー";
   };
 
-  // 記事のPV数を取得する関数
-  const fetchArticleViews = async () => {
-    try {
-      const res = await fetch("/api/pageviews/articles");
-      if (res.ok) {
-        const data = await res.json();
-        const viewsMap: { [key: number]: number } = {};
-        data.forEach((item: { articleId: number; views: number }) => {
-          viewsMap[item.articleId] = item.views;
-        });
-        setArticleViews(viewsMap);
-      }
-    } catch (error) {
-      console.error("PV数の取得に失敗しました:", error);
-    }
-  };
-
-  // 記事の投げ銭合計を取得する関数
+  // 記事のチップ（投げ銭）情報を取得する関数
   const fetchArticleTips = async () => {
     try {
       const res = await fetch("/api/tips/summary");
@@ -223,7 +201,6 @@ export default function PrefecturePage() {
 
     getAuthorNames();
     getAdvertiserNames();
-    fetchArticleViews();
     fetchArticleTips();
   }, [articles, topics]);
 
@@ -518,7 +495,7 @@ export default function PrefecturePage() {
                                       {/* PV数バッジ */}
                                       <div className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded-full flex items-center">
                                         <Eye className="h-3 w-3 mr-1" />
-                                        {articleViews[article.id] || 0} PV
+                                        {article.views} PV
                                       </div>
 
                                       {/* 投げ銭バッジ */}

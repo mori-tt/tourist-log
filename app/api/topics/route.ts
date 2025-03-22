@@ -50,7 +50,6 @@ export async function POST(req: Request) {
         title,
         content,
         adFee: _adFee,
-        monthlyPVThreshold: _monthlyPVThreshold,
         advertiserId,
       },
     });

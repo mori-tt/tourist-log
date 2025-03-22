@@ -63,12 +63,10 @@ model Topic {
   title              String
   content            String
   adFee              Float
-  monthlyPVThreshold Int
   advertiserId       String
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
   articles           Article[]
-  monthlyPageViews   MonthlyPageView[]
   advertiser         User              @relation(fields: [advertiserId], references: [id])
 }
 
@@ -125,29 +123,11 @@ model Transaction {
   @@index([articleId])
 }
 
-model MonthlyPageView {
-  id              Int       @id @default(autoincrement())
-  topicId         Int
-  year            Int
-  month           Int
-  pageViews       Int       @default(0)
-  isConfirmed     Boolean   @default(false)
-  isPaid          Boolean   @default(false)
-  confirmedAt     DateTime?
-  paidAt          DateTime?
-  transactionHash String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  topic           Topic     @relation(fields: [topicId], references: [id])
-
-  @@unique([topicId, year, month])
-  @@index([topicId])
-  @@index([year, month])
-}
-
 enum TransactionType {
   advertisement
   tip
   purchase
   receive_tip
+  ad_payment
+  ad_revenue
 }

@@ -7,7 +7,6 @@ import {
   PlainMessage,
   UInt64,
   Address,
-  SignedTransaction,
   Mosaic,
   MosaicId,
   TransactionGroup,
@@ -65,9 +64,12 @@ export async function sendXYMTransaction(
   const signReadyTx = transferTransaction.setMaxFee(feeAmount);
   const fee = UInt64.fromUint(feeAmount);
 
-  const networkGenerationHash =
-    process.env.NETWORK_GENERATION_HASH ||
-    "7FCCD304802016BEBBCD342A332F91FF1F3BB5E902988B352697BE245F48E836";
+  const networkGenerationHash = process.env.NETWORK_GENERATION_HASH;
+  if (!networkGenerationHash) {
+    throw new Error(
+      "NETWORK_GENERATION_HASH is not defined in environment variables"
+    );
+  }
   const signedTransaction = account.sign(signReadyTx, networkGenerationHash);
 
   const transactionHttp = repositoryFactory.createTransactionRepository();

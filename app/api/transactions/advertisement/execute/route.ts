@@ -22,20 +22,12 @@ export async function POST(req: Request) {
       );
     }
 
-    // Topic から月間PV閾値と広告料を取得
+    // Topic から広告料を取得
     const topic = await prisma.topic.findUnique({
       where: { id: Number(article.topicId) },
     });
     if (!topic) {
       return NextResponse.json({ error: "Topic not found" }, { status: 404 });
-    }
-
-    // ※ Article モデルに viewCount フィールドが存在すること
-    if (article.viewCount < topic.monthlyPVThreshold) {
-      return NextResponse.json(
-        { error: "PV threshold not reached for ad fee payment" },
-        { status: 400 }
-      );
     }
 
     // 広告料の算出（topic.adFee を利用）

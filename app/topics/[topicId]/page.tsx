@@ -15,11 +15,10 @@ import {
   Trash,
   ArrowLeft,
   Info,
-  Star,
-  TrendingUp,
   Globe,
 } from "lucide-react";
 import { Article } from "@/types/article";
+import ReactMarkdown from "react-markdown";
 
 export default function TopicPage() {
   const { data: session, status } = useSession();
@@ -175,26 +174,12 @@ export default function TopicPage() {
 
         <CardContent className="p-6 sm:p-8">
           <div className="prose prose-sm sm:prose max-w-none">
-            <div className="mb-8 whitespace-pre-wrap">{topic.content}</div>
+            <div className="mb-8 whitespace-pre-wrap">
+              <ReactMarkdown>{topic.content}</ReactMarkdown>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-            <div className="flex items-center bg-muted/50 p-4 rounded-lg">
-              <Star className="h-5 w-5 text-primary mr-3" />
-              <div>
-                <p className="text-xs text-muted-foreground">広告料</p>
-                <p className="font-medium">{topic.adFee} XYM</p>
-              </div>
-            </div>
-            <div className="flex items-center bg-muted/50 p-4 rounded-lg">
-              <TrendingUp className="h-5 w-5 text-primary mr-3" />
-              <div>
-                <p className="text-xs text-muted-foreground">
-                  月間PV支払い基準
-                </p>
-                <p className="font-medium">{topic.monthlyPVThreshold}</p>
-              </div>
-            </div>
             <div className="flex items-center bg-muted/50 p-4 rounded-lg">
               <Globe className="h-5 w-5 text-primary mr-3" />
               <div>
@@ -277,9 +262,11 @@ export default function TopicPage() {
                           )}
                         </span>
                       </div>
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {article.content.substring(0, 150)}...
-                      </p>
+                      <div className="text-sm text-muted-foreground line-clamp-2 prose prose-sm">
+                        <ReactMarkdown>
+                          {article.content.substring(0, 150)}
+                        </ReactMarkdown>
+                      </div>
                     </Link>
 
                     {/* Delete button conditions */}

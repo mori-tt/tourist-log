@@ -31,7 +31,7 @@ export default function HomePage() {
       <section className="py-16 px-4 text-center">
         <div className="max-w-3xl mx-auto">
           <h1 className="text-4xl sm:text-5xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">
-            地元の地方クリエイターが造る Tourist Log
+            Tourist<span className="text-blue-400">Log</span>
           </h1>
           <p className="text-xl text-muted-foreground mb-10 leading-relaxed">
             日本全国の隠れた魅力を、地元クリエイターの視点で発見しよう
@@ -110,7 +110,9 @@ export default function HomePage() {
       <section id="about" className="py-20 px-4">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold mb-4">Tourist Log について</h2>
+            <h2 className="text-3xl font-bold mb-4">
+              Tourist<span className="text-blue-400">Log</span> について
+            </h2>
             <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
               地元の視点から日本の魅力を再発見する、次世代の観光プラットフォーム
             </p>
@@ -151,11 +153,11 @@ export default function HomePage() {
                   <Sparkles className="h-6 w-6" />
                 </div>
                 <h3 className="text-xl font-bold mb-3">
-                  広告主とクリエイターの橋渡し
+                  広告主と地方の地元クリエイターの橋渡し
                 </h3>
                 <p className="text-muted-foreground leading-relaxed">
-                  広告主が作ってほしい記事のトピックを立て、地方クリエイターが記事を作成。
-                  PVに応じた広告料の支払いなど、新しい広告モデルを提供します。
+                  広告主が作ってほしい記事のトピックを立て、地方の地元クリエイターが記事を作成。
+                  クリエイターは、記事購入や投げ銭で直接支援を受けられる
                 </p>
               </div>
             </div>
@@ -190,7 +192,7 @@ export default function HomePage() {
                     <span className="text-primary font-medium">3</span>
                   </span>
                   <p className="text-muted-foreground">
-                    旅の前に地元の人とつながり、個別のアドバイスをもらえる
+                    ユーザーは、旅の前に地元の人より有益な情報を得られる
                   </p>
                 </li>
               </ul>

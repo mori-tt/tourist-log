@@ -1,108 +1,130 @@
-import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
+import prisma from "@/lib/prisma";
 
-export async function GET() {
+// このAPIエンドポイントの説明を追加
+// 管理者用のトランザクション（取引履歴）のデータを取得するAPI
+
+export async function GET(req: NextRequest) {
   try {
+    // セッションチェック
     const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
+    if (!session || !session.user || session.user.isAdmin !== true) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const isAdmin = session.user?.isAdmin;
-    if (!isAdmin) {
-      return NextResponse.json({ error: "権限がありません" }, { status: 403 });
-    }
+    // クエリパラメータを取得
+    const searchParams = req.nextUrl.searchParams;
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "50");
+    const skip = (page - 1) * limit;
 
-    // 全てのトランザクションを取得
+    // トランザクションの総数を取得
+    const totalCount = await prisma.transaction.count();
+
+    // トランザクションデータを取得（ページネーション付き）
     const transactions = await prisma.transaction.findMany({
-      select: {
-        id: true,
-        type: true,
-        xymAmount: true,
-        transactionHash: true,
-        createdAt: true,
-        articleId: true,
-        topicId: true,
-        userId: true,
-        metadata: true,
-      },
+      skip,
+      take: limit,
       orderBy: {
         createdAt: "desc",
       },
     });
 
-    // 関連する記事とトピックの情報を取得
+    // 記事IDとトピックIDのリストを作成
     const articleIds = transactions
-      .map((t) => t.articleId)
-      .filter((id): id is number => id !== null);
-    const topicIds = transactions.map((t) => t.topicId);
+      .filter((tx) => tx.articleId !== null)
+      .map((tx) => tx.articleId as number);
 
-    const [articles, topics] = await Promise.all([
-      prisma.article.findMany({
-        where: {
-          id: { in: articleIds },
-        },
-        select: {
-          id: true,
-          title: true,
-          user: {
-            select: {
-              id: true,
-              name: true,
+    const topicIds = transactions
+      .filter((tx) => tx.topicId !== null)
+      .map((tx) => tx.topicId);
+
+    // 記事情報を取得
+    const articles =
+      articleIds.length > 0
+        ? await prisma.article.findMany({
+            where: {
+              id: { in: articleIds },
             },
-          },
-        },
-      }),
-      prisma.topic.findMany({
-        where: {
-          id: { in: topicIds },
-        },
-        select: {
-          id: true,
-          title: true,
-          advertiser: {
-            select: {
-              id: true,
-              name: true,
+            include: {
+              user: true,
             },
-          },
-        },
-      }),
-    ]);
+          })
+        : [];
+
+    // トピック情報を取得
+    const topics =
+      topicIds.length > 0
+        ? await prisma.topic.findMany({
+            where: {
+              id: { in: topicIds },
+            },
+            include: {
+              advertiser: true,
+            },
+          })
+        : [];
+
+    // ユーザーIDを収集
+    const userIds = [
+      ...new Set([
+        ...transactions
+          .filter((tx) => tx.userId !== null)
+          .map((tx) => tx.userId as string),
+      ]),
+    ];
 
     // ユーザー情報を取得
-    const userIds = transactions
-      .map((t) => t.userId)
-      .filter((id): id is string => id !== null);
-    const users = await prisma.user.findMany({
-      where: {
-        id: { in: userIds },
-      },
-      select: {
-        id: true,
-        name: true,
-      },
+    const users =
+      userIds.length > 0
+        ? await prisma.user.findMany({
+            where: {
+              id: {
+                in: userIds,
+              },
+            },
+          })
+        : [];
+
+    // 各種マップを作成
+    const articleMap = new Map(articles.map((a) => [a.id, a]));
+    const topicMap = new Map(topics.map((t) => [t.id, t]));
+    const userMap = new Map(users.map((u) => [u.id, u]));
+
+    // トランザクションデータを処理
+    const processedTransactions = transactions.map((tx) => {
+      const article = tx.articleId
+        ? articleMap.get(tx.articleId as number)
+        : null;
+      const topic = tx.topicId ? topicMap.get(tx.topicId) : null;
+      const user = tx.userId ? userMap.get(tx.userId as string) : null;
+
+      // 記事の著者ユーザー
+      const authorUser = article?.user || null;
+
+      // トピックの広告主ユーザー
+      const advertiserUser = topic?.advertiser || null;
+
+      return {
+        ...tx,
+        article,
+        topic,
+        user,
+        authorUser,
+        advertiserUser,
+      };
     });
 
-    // トランザクションに記事とトピックの情報を結合
-    const transactionsWithDetails = transactions.map((transaction) => ({
-      ...transaction,
-      article: transaction.articleId
-        ? articles.find((a) => a.id === transaction.articleId)
-        : null,
-      topic: topics.find((t) => t.id === transaction.topicId),
-      user: transaction.userId
-        ? users.find((u) => u.id === transaction.userId)
-        : null,
-    }));
-
-    return NextResponse.json({ transactions: transactionsWithDetails });
+    return NextResponse.json({
+      transactions: processedTransactions,
+      totalCount,
+    });
   } catch (error) {
-    console.error("トランザクション履歴の取得に失敗しました:", error);
+    console.error("Error fetching admin transactions:", error);
     return NextResponse.json(
-      { error: "トランザクション履歴の取得に失敗しました" },
+      { error: "Internal Server Error" },
       { status: 500 }
     );
   }

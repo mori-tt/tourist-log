@@ -6,7 +6,7 @@ import { useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Users, CreditCard, BarChart3, Home } from "lucide-react";
+import { Users, CreditCard, Home } from "lucide-react";
 
 export default function AdminDashboard() {
   const { data: session, status } = useSession();
@@ -50,16 +50,10 @@ export default function AdminDashboard() {
       href: "/admin/users",
     },
     {
-      title: "取引履歴",
+      title: "ユーザーの全XYM取引履歴",
       description: "全てのXYM取引履歴を確認",
       icon: <CreditCard className="h-6 w-6" />,
       href: "/admin/transactions",
-    },
-    {
-      title: "PV広告料管理",
-      description: "PV広告料支払い管理",
-      icon: <BarChart3 className="h-6 w-6" />,
-      href: "/advertiser/payments",
     },
   ];
 

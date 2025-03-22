@@ -106,36 +106,6 @@ export default function TopicEditPage() {
                 <p>{topic.content}</p>
               )}
             </div>
-            <div className="mb-4">
-              <label className="block mb-1">広告料:</label>
-              {isEditable ? (
-                <input
-                  type="number"
-                  {...register("adFee", {
-                    required: true,
-                    valueAsNumber: true,
-                  })}
-                  className="border p-2 w-full"
-                />
-              ) : (
-                <p>{topic.adFee} XYM</p>
-              )}
-            </div>
-            <div className="mb-4">
-              <label className="block mb-1">月間PV支払い基準:</label>
-              {isEditable ? (
-                <input
-                  type="number"
-                  {...register("monthlyPVThreshold", {
-                    required: true,
-                    valueAsNumber: true,
-                  })}
-                  className="border p-2 w-full"
-                />
-              ) : (
-                <p>{topic.monthlyPVThreshold}</p>
-              )}
-            </div>
             <div className="mb-4 flex gap-4">
               {isEditable && <Button type="submit">更新</Button>}
               {isDeletable && (

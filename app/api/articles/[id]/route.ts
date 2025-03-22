@@ -3,6 +3,57 @@ import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/authOptions";
 
+export async function GET(
+  req: Request,
+  context: { params: Promise<{ id: string }> }
+): Promise<Response> {
+  try {
+    const { params } = await context;
+    const id = (await params).id;
+
+    const article = await prisma.article.findUnique({
+      where: { id: Number(id) },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            walletAddress: true,
+            email: true,
+          },
+        },
+        topic: {
+          include: {
+            advertiser: {
+              select: {
+                id: true,
+                name: true,
+                walletAddress: true,
+              },
+            },
+          },
+        },
+        images: true,
+      },
+    });
+
+    if (!article) {
+      return NextResponse.json(
+        { error: "記事が見つかりません" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(article);
+  } catch (error) {
+    console.error("記事取得に失敗しました:", error);
+    return NextResponse.json(
+      { error: "記事取得に失敗しました" },
+      { status: 500 }
+    );
+  }
+}
+
 export async function PATCH(
   req: Request,
   context: { params: Promise<{ id: string }> }

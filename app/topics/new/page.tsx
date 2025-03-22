@@ -14,8 +14,8 @@ export default function NewTopicPage() {
   // すべてのHooksを最初に宣言
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [adFee, setAdFee] = useState("");
-  const [monthlyPVThreshold, setMonthlyPVThreshold] = useState("");
+  const [adFee] = useState("");
+  const [monthlyPVThreshold] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -78,34 +78,7 @@ export default function NewTopicPage() {
             required
           />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <label className="block mb-1">広告料 (XYM)</label>
-            <Input
-              type="number"
-              min="0"
-              value={adFee}
-              onChange={(e) => setAdFee(e.target.value)}
-              placeholder="例: 500"
-              required
-            />
-            <p className="text-sm text-gray-500 mt-1">
-              PV達成時に支払う広告料金
-            </p>
-          </div>
-          <div>
-            <label className="block mb-1">月間PV基準</label>
-            <Input
-              type="number"
-              min="0"
-              value={monthlyPVThreshold}
-              onChange={(e) => setMonthlyPVThreshold(e.target.value)}
-              placeholder="例: 1000"
-              required
-            />
-            <p className="text-sm text-gray-500 mt-1">広告料金を支払うPV閾値</p>
-          </div>
-        </div>
+
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? "投稿中..." : "投稿する"}
         </Button>

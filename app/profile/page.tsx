@@ -45,19 +45,62 @@ export default function ProfilePage() {
       redirect("/login");
     }
 
-    // 仮のユーザー情報を作成
-    const dummyUserInfo: UserInfo = {
-      id: session?.user?.id || "unknown",
-      name: session?.user?.name || "名前未設定",
-      isAdmin: session?.user?.isAdmin || false,
-      isAdvertiser: session?.user?.isAdvertiser || false,
-      joinedAt: "2023年1月1日",
-      prefecture: "東京都",
-      interests: ["観光", "グルメ", "文化体験"],
+    // ユーザー情報を取得
+    const fetchUserInfo = async () => {
+      try {
+        const response = await fetch(`/api/user/${session.user.id}`);
+        if (response.ok) {
+          const userData = await response.json();
+
+          // DBから取得したユーザー情報をセット
+          const userInfoData: UserInfo = {
+            id: session?.user?.id || "unknown",
+            name: userData.name || session?.user?.name || "名前未設定",
+            isAdmin: session?.user?.isAdmin || false,
+            isAdvertiser: session?.user?.isAdvertiser || false,
+            joinedAt: userData.createdAt
+              ? new Date(userData.createdAt).toLocaleDateString("ja-JP")
+              : "不明",
+            prefecture: "東京都", // 現状のDBにはprefectureフィールドがないため固定値を使用
+            interests: ["観光", "グルメ", "文化体験"], // 現状のDBにはinterestsフィールドがないため固定値を使用
+            image: userData.image || session?.user?.image || undefined,
+          };
+
+          setUserInfo(userInfoData);
+        } else {
+          // APIからの取得に失敗した場合はセッション情報から最低限のデータを作成
+          const dummyUserInfo: UserInfo = {
+            id: session?.user?.id || "unknown",
+            name: session?.user?.name || "名前未設定",
+            isAdmin: session?.user?.isAdmin || false,
+            isAdvertiser: session?.user?.isAdvertiser || false,
+            joinedAt: "不明",
+            prefecture: "東京都", // 固定値
+            interests: ["観光", "グルメ", "文化体験"], // 固定値
+            image: session?.user?.image || undefined,
+          };
+          setUserInfo(dummyUserInfo);
+        }
+      } catch (error) {
+        console.error("ユーザー情報の取得に失敗しました:", error);
+        // エラー時は最低限の情報をセット
+        const dummyUserInfo: UserInfo = {
+          id: session?.user?.id || "unknown",
+          name: session?.user?.name || "名前未設定",
+          isAdmin: session?.user?.isAdmin || false,
+          isAdvertiser: session?.user?.isAdvertiser || false,
+          joinedAt: "不明",
+          prefecture: "東京都", // 固定値
+          interests: ["観光", "グルメ", "文化体験"], // 固定値
+          image: session?.user?.image || undefined,
+        };
+        setUserInfo(dummyUserInfo);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    setUserInfo(dummyUserInfo);
-    setIsLoading(false);
+    fetchUserInfo();
   }, [session, status]);
 
   if (status === "loading" || isLoading) {

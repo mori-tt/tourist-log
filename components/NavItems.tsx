@@ -15,7 +15,7 @@ export default function NavItems() {
     { href: "/", label: "ホーム" },
     { href: "/topics", label: "トピック" },
     { href: "/#about", label: "About" },
-    { href: "/profile/transactions", label: "XYM取引履歴" },
+    { href: "/profile/transactions", label: "MY XYM取引履歴" },
   ];
 
   // 追加の管理者リンク
@@ -25,7 +25,7 @@ export default function NavItems() {
 
   // 追加の広告主リンク
   if (session?.user?.isAdvertiser) {
-    navLinks.push({ href: "/advertiser", label: "広告主" });
+    navLinks.push({ href: "/advertiser", label: "広告主ダッシュボード" });
   }
 
   return (

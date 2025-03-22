@@ -55,7 +55,7 @@ export default function Header() {
           {/* Top row: Logo, navigation for desktop and menu button for mobile */}
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <Link href="/" className="flex items-center space-x-2">
+              <Link href="/" className="flex items-center space-x-1">
                 <Compass className="h-6 w-6 text-blue-400" />
                 <span className="font-bold text-xl text-primary">
                   Tourist<span className="text-blue-400">Log</span>
@@ -182,20 +182,25 @@ export default function Header() {
                 About
               </Link>
 
-              <Link
-                href="/profile/transactions"
-                className={cn(
-                  "block px-3 py-2 rounded-md text-base font-medium text-center",
-                  pathname === "/profile/transactions"
-                    ? "bg-primary/10 text-primary"
-                    : "text-gray-700 hover:bg-gray-100"
-                )}
-              >
-                XYM取引履歴
-              </Link>
+              {!session?.user?.isAdmin && session?.user && (
+                <Link
+                  href="/profile/transactions"
+                  onClick={() => setIsOpen(false)}
+                  className={cn(
+                    "block px-3 py-2 rounded-md text-base font-medium text-center",
+                    pathname === "/profile/transactions"
+                      ? "bg-primary/10 text-primary"
+                      : "text-gray-700 hover:bg-gray-100"
+                  )}
+                >
+                  MY XYM取引履歴
+                </Link>
+              )}
+
               {session?.user?.isAdmin && (
                 <Link
                   href="/admin"
+                  onClick={() => setIsOpen(false)}
                   className={cn(
                     "block px-3 py-2 rounded-md text-base font-medium text-center",
                     pathname === "/admin"
@@ -204,19 +209,6 @@ export default function Header() {
                   )}
                 >
                   管理者ダッシュボード
-                </Link>
-              )}
-              {session?.user?.isAdvertiser && (
-                <Link
-                  href="/advertiser"
-                  className={cn(
-                    "block px-3 py-2 rounded-md text-base font-medium text-center",
-                    pathname === "/topics"
-                      ? "bg-primary/10 text-primary"
-                      : "text-gray-700 hover:bg-gray-100"
-                  )}
-                >
-                  広告主
                 </Link>
               )}
 

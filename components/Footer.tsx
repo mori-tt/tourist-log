@@ -3,7 +3,6 @@
 import React from "react";
 import Link from "next/link";
 import { Instagram, ChevronUp, Compass } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 // 日本の地方と都道府県コードを定義
 const regions = [
@@ -124,10 +123,10 @@ export default function Footer() {
 
       {/* メインフッター */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* サイト情報 */}
           <div className="md:col-span-1">
-            <Link href="/" className="flex items-center space-x-2">
+            <Link href="/" className="flex items-center space-x-1">
               <Compass className="h-6 w-6 text-blue-400" />
               <span className="font-bold text-xl text-primary">
                 Tourist<span className="text-blue-400">Log</span>
@@ -173,40 +172,6 @@ export default function Footer() {
                 </div>
               ))}
             </div>
-          </div>
-
-          {/* サポート・お問い合わせ */}
-          <div className="md:col-span-1">
-            <h3 className="text-sm font-semibold text-gray-900 mb-4">
-              サポート
-            </h3>
-            <ul className="space-y-2 mb-6">
-              <li>
-                <Link
-                  href="/#about"
-                  className="text-sm text-gray-600 hover:text-primary transition-colors"
-                >
-                  サイトについて
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/terms"
-                  className="text-sm text-gray-600 hover:text-primary transition-colors"
-                >
-                  利用規約
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/privacy"
-                  className="text-sm text-gray-600 hover:text-primary transition-colors"
-                >
-                  プライバシーポリシー
-                </Link>
-              </li>
-            </ul>
-            <Button className="w-full rounded-full">お問い合わせ</Button>
           </div>
         </div>
       </div>

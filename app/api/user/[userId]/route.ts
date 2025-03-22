@@ -25,6 +25,8 @@ export async function GET(
         isAdmin: true,
         isAdvertiser: true,
         isActive: true,
+        createdAt: true,
+        image: true,
       },
     });
 
