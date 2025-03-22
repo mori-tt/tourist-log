@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { Article } from "@/types/article";
 import ReactMarkdown from "react-markdown";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function TopicPage() {
   const { data: session, status } = useSession();
@@ -31,6 +32,8 @@ export default function TopicPage() {
   const [advertiserName, setAdvertiserName] = useState<string>("");
   const [relatedArticles, setRelatedArticles] = useState<Article[]>([]);
   const [authorNames, setAuthorNames] = useState<{ [key: string]: string }>({});
+  const { toast } = useToast();
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // 広告主名を取得
   useEffect(() => {
@@ -104,16 +107,40 @@ export default function TopicPage() {
   const handleDelete = async () => {
     if (
       confirm(
-        "このトピックを削除してもよろしいですか？関連する記事も削除される可能性があります。"
+        "このトピックを削除してもよろしいですか？この操作は元に戻せません。"
       )
     ) {
-      const res = await fetch(`/api/topics/${topicId}`, {
-        method: "DELETE",
-      });
-      if (res.ok) {
-        router.push("/");
-      } else {
-        console.error("トピック削除に失敗しました");
+      try {
+        setIsDeleting(true);
+        const res = await fetch(`/api/topics/${topicId}`, {
+          method: "DELETE",
+        });
+        if (res.ok) {
+          toast({
+            title: "削除完了",
+            description: "トピックが正常に削除されました",
+            variant: "default",
+          });
+          router.push("/topics");
+        } else {
+          const errorData = await res.json();
+          toast({
+            title: "削除失敗",
+            description:
+              errorData.error || "トピック削除中にエラーが発生しました",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error("トピック削除エラー:", error);
+        toast({
+          title: "削除失敗",
+          description:
+            "ネットワークエラーが発生しました。もう一度お試しください。",
+          variant: "destructive",
+        });
+      } finally {
+        setIsDeleting(false);
       }
     }
   };
@@ -153,21 +180,20 @@ export default function TopicPage() {
   // トピック情報のレンダリング
   return (
     <div className="container mx-auto py-8 px-4 max-w-5xl">
-      <div className="mb-8">
-        <Link
-          href="/"
-          className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4 mr-1" />
-          <span>ホームに</span>
-        </Link>
-        <br />
+      <div className="flex flex-wrap gap-3 mb-8">
         <Link
           href="/topics"
-          className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors"
+          className="inline-flex items-center px-3 py-2 rounded-md bg-muted text-sm hover:bg-muted/80 transition-colors"
         >
-          <ArrowLeft className="h-4 w-4 mr-1" />
-          <span>トピック一覧に</span>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          トピック一覧へ戻る
+        </Link>
+        <Link
+          href="/"
+          className="inline-flex items-center px-3 py-2 rounded-md bg-muted text-sm hover:bg-muted/80 transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          ホームへ戻る
         </Link>
       </div>
 
@@ -215,9 +241,19 @@ export default function TopicPage() {
                   variant="destructive"
                   onClick={handleDelete}
                   className="flex items-center"
+                  disabled={isDeleting}
                 >
-                  <Trash className="h-4 w-4 mr-2" />
-                  削除する
+                  {isDeleting ? (
+                    <>
+                      <div className="animate-spin h-4 w-4 mr-2 border-t-2 border-b-2 border-white rounded-full"></div>
+                      削除中...
+                    </>
+                  ) : (
+                    <>
+                      <Trash className="h-4 w-4 mr-2" />
+                      削除する
+                    </>
+                  )}
                 </Button>
               )}
             </div>

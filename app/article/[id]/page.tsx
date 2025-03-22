@@ -32,6 +32,7 @@ import {
   Info,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/components/ui/use-toast";
 
 // 取引履歴の型定義
 interface Transaction {
@@ -67,6 +68,8 @@ export default function ArticleDetailPage() {
   const { articles } = useArticles();
   const { topics } = useTopics();
   const { setValue } = useForm<ArticleFormData>();
+  const { toast } = useToast();
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [tipDialogOpen, setTipDialogOpen] = useState(false);
   const [tipAmount, setTipAmount] = useState(10);
@@ -425,15 +428,39 @@ export default function ArticleDetailPage() {
   };
 
   const handleDelete = async () => {
-    if (confirm("本当にこの記事を削除しますか？")) {
-      const res = await fetch(`/api/articles/${articleId}`, {
-        method: "DELETE",
-      });
-      if (res.ok) {
-        alert("記事が削除されました");
-        router.push("/articles");
-      } else {
-        alert("記事の削除に失敗しました");
+    if (confirm("本当にこの記事を削除しますか？この操作は元に戻せません。")) {
+      try {
+        setIsDeleting(true);
+        const res = await fetch(`/api/articles/${articleId}`, {
+          method: "DELETE",
+        });
+
+        if (res.ok) {
+          toast({
+            title: "削除完了",
+            description: "記事が正常に削除されました",
+            variant: "default",
+          });
+          router.push("/articles");
+        } else {
+          const errorData = await res.json();
+          toast({
+            title: "削除失敗",
+            description:
+              errorData.error || "記事の削除中にエラーが発生しました",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error("記事削除エラー:", error);
+        toast({
+          title: "削除失敗",
+          description:
+            "ネットワークエラーが発生しました。もう一度お試しください。",
+          variant: "destructive",
+        });
+      } finally {
+        setIsDeleting(false);
       }
     }
   };
@@ -549,20 +576,20 @@ export default function ArticleDetailPage() {
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-5xl">
-      <div className="mb-8">
+      <div className="flex flex-wrap gap-3 mb-8">
         <Link
           href={`/topics/${article.topicId}`}
-          className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors"
+          className="inline-flex items-center px-3 py-2 rounded-md bg-muted text-sm hover:bg-muted/80 transition-colors"
         >
-          <ArrowLeft className="h-4 w-4 mr-1" />
-          <span>トピックへ</span>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          トピックへ戻る
         </Link>
         <Link
           href="/"
-          className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors"
+          className="inline-flex items-center px-3 py-2 rounded-md bg-muted text-sm hover:bg-muted/80 transition-colors"
         >
-          <ArrowLeft className="h-4 w-4 mr-1" />
-          <span>ホームへ</span>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          ホームへ戻る
         </Link>
       </div>
 
@@ -790,9 +817,19 @@ export default function ArticleDetailPage() {
                   variant="destructive"
                   onClick={handleDelete}
                   className="flex items-center gap-2"
+                  disabled={isDeleting}
                 >
-                  <Trash className="h-4 w-4" />
-                  削除
+                  {isDeleting ? (
+                    <>
+                      <div className="animate-spin h-4 w-4 mr-2 border-t-2 border-b-2 border-white rounded-full"></div>
+                      削除中...
+                    </>
+                  ) : (
+                    <>
+                      <Trash className="h-4 w-4" />
+                      削除
+                    </>
+                  )}
                 </Button>
               </>
             )}
