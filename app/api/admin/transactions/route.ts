@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
     // 記事IDとトピックIDのリストを作成
     const articleIds = transactions
       .filter((tx) => tx.articleId !== null)
-      .map((tx) => tx.articleId as number);
+      .map((tx) => Number(tx.articleId));
 
     const topicIds = transactions
       .filter((tx) => tx.topicId !== null)
@@ -96,10 +96,10 @@ export async function GET(req: NextRequest) {
     // トランザクションデータを処理
     const processedTransactions = transactions.map((tx) => {
       const article = tx.articleId
-        ? articleMap.get(tx.articleId as number)
+        ? articleMap.get(Number(tx.articleId))
         : null;
       const topic = tx.topicId ? topicMap.get(tx.topicId) : null;
-      const user = tx.userId ? userMap.get(tx.userId as string) : null;
+      const user = tx.userId ? userMap.get(tx.userId) : null;
 
       // 記事の著者ユーザー
       const authorUser = article?.user || null;
